@@ -2,30 +2,13 @@
 //Look at handlebars
 //
 //Start with a static tb and try to genererate a gnerator for it
-package buffer
+package f2_dsp_tapein0
 
 import chisel3._
 import java.io.{File, FileWriter, BufferedWriter}
 
-class BUFFER extends Module {
-  val io = IO(new Bundle {
-    val input        = Input(UInt(16.W))
-    val output     = Output(UInt(16.W))
-  })
-
-  val x  = Reg(UInt())
-
-  x := io.input
-  io.output := x
-}
-
-//This gives you verilog
-object BUFFER extends App {
-  chisel3.Driver.execute(args, () => new BUFFER)
-}
-
-//Testbench. Generate where the instance is generated
-object tb_BUFFER {
+//Testbench.
+object tb_f2_dsp_tapein0 {
   def main(args: Array[String]): Unit = {
     //How to extract the filepath?
     //How to extract the dutname
@@ -52,7 +35,7 @@ object tb_BUFFER {
                     |initial clk = 1'b0;
                     |always #(c_Ts)clk = !clk ;
                     |
-                    |inverter DUT( .A(iptr_A), .Z(Z) );
+                    |tb_f2_dsp_tapein0 DUT( .A(iptr_A), .Z(Z) );
                     |
                     |
                     |initial #0 begin
