@@ -6,22 +6,19 @@ package f2_dsp_tapein0
 
 import chisel3.experimental._
 import chisel3._
+import iodatatypes._
 
-class f2_dsp_tapein0 extends Module {
+class f2_dsp_tapein0 (n: Int=16) extends Module {
   val io = IO(new Bundle {
     val clock_DSP     = Input(Clock())
-    val iptr_Areal    = Input(UInt(16.W))
-    val iptr_Aimag    = Input(UInt(16.W))
-    val Zreal         = Output(UInt(16.W))
-    val Zimag         = Output(UInt(16.W))
+    val iptr_A        = new complexIn(n=n)
+    val Z             = Flipped(new complexIn(n=n))
   })
 
-  val inregreal  = RegNext(io.iptr_Areal)
-  val inregimag  = RegNext(io.iptr_Aimag)
+  val inreg  = RegNext(io.iptr_A)
 
   withClock (io.clock_DSP){
-    io.Zreal := RegNext(inregreal)
-    io.Zimag := RegNext(inregimag)
+    io.Z := RegNext(inreg)
   }
 
 }
