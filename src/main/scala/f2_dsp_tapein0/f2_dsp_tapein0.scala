@@ -1,12 +1,11 @@
 // See LICENSE for license details.
-//Look at handlebars
 //
 //Start with a static tb and try to genererate a gnerator for it
 package f2_dsp_tapein0
 
 import chisel3.experimental._
 import chisel3._
-import iodatatypes._
+import datatypes._
 
 class f2_dsp_tapein0 (n: Int=16) extends Module {
   val io = IO(new Bundle {
