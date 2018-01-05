@@ -64,7 +64,7 @@ object halfband extends App {
 
 
 //These are the halfband filters for cutoff 0.45. Attenuation about -70db
-//with 16-bit coefficients
+//with 16-bit coefficients.
 object F2halfbands {
 
 val hb1=Seq(0.01371060509031136846747056523554,
