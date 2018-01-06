@@ -4,6 +4,7 @@ package halfband
 import chisel3.experimental._
 import chisel3._
 import datatypes._
+import halfband_BW_045_N_40._
 
 class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5)) extends Module {
   val io = IO(new Bundle {
@@ -12,9 +13,13 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
     val Z             = Flipped(new complexIn(n=n))
   })
 
+  //Output scaling
+  val scale = 2.U
   //I guess lots of stuff could be reduced by creating a function for the subfilter
-  val sub1coeffs=coeffs.indices.filter(_ %2==1).map(coeffs(_)) //Odd coeffs
-  val sub2coeffs=coeffs.indices.filter(_ %2==0).map(coeffs(_)) //Even coeffs
+  val sub1coeffs=coeffs.indices.filter(_ %2==0).map(coeffs(_)) //Even coeffs
+  val sub2coeffs=coeffs.indices.filter(_ %2==1).map(coeffs(_)) //Odd coeffs
+  println(sub1coeffs)
+  println(sub2coeffs)
 
   val sub1stages=sub1coeffs.length //number of register stages in first subfir
   val sub2stages=sub2coeffs.length //number of register stages in second subfir
@@ -29,7 +34,7 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
     slowregs(0):=inregs(0)
     slowregs(1):=inregs(1)
 
-    // Transposed direct form subfilters. Folding left fior the synthsizer
+    // Transposed direct form subfilters. Folding left for the synthesizer
     // Remains to be seen if it is clever enough
     val sub1regs  = Reg(Vec(sub1stages+1, new complex(n=resolution)))
     sub1regs(0).real:= 0.U(resolution.W)
@@ -47,8 +52,8 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
       sub2regs(i+1).imag:=(slowregs(1).imag.asSInt*sub2coeffs(i).asSInt+sub2regs(i).imag.asSInt).asUInt
     }
     
-    io.Z.real := (sub1regs(sub1stages).real+sub2regs(sub2stages).real)(resolution-1,resolution-n)
-    io.Z.imag := (sub1regs(sub1stages).imag+sub2regs(sub2stages).imag)(resolution-1,resolution-n)
+    io.Z.real := ((sub1regs(sub1stages).real+sub2regs(sub2stages).real)*scale)(resolution-1,resolution-n)
+    io.Z.imag := ((sub1regs(sub1stages).imag+sub2regs(sub2stages).imag)*scale)(resolution-1,resolution-n)
 
   }
 }
@@ -57,7 +62,8 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
 object halfband extends App {
   //Convert coeffs to integers with 16 bit resolution
   val coeffres=16
-  val taps = F2halfbands.hb1.map(_ * (math.pow(2,coeffres-1)-1)).map(_.toInt)
+  val taps = halfband_BW_045_N_40.H.map(_ * (math.pow(2,coeffres-1)-1)).map(_.toInt)
+  //val taps = F2halfbands.hb3.map(_ * (math.pow(2,coeffres-1)-1)).map(_.toInt)
   chisel3.Driver.execute(args, () => new halfband(coeffs=taps) )
 }
 
