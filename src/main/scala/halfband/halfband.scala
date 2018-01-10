@@ -20,34 +20,27 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
         val Z               = Output(DspComplex(SInt(n.W), SInt(n.W)))
     })
 
-  val czero  = DspComplex(0.S(resolution.W),0.S(resolution.W)) //Output scaling
-  val scale = 2.S //Output scaling
-
-
-  //I guess lots of stuff could be reduced by creating a function for the subfilter
-  val sub1coeffs=coeffs.indices.filter(_ %2==0).map(coeffs(_)) //Even coeffs
-  val sub2coeffs=coeffs.indices.filter(_ %2==1).map(coeffs(_)) //Odd coeffs
-  println(sub1coeffs)
-  println(sub2coeffs)
-
-  //val sub1stages=sub1coeffs.length //number of register stages in first subfir
-  //val sub2stages=sub2coeffs.length //number of register stages in second subfir
+  val czero  = DspComplex(0.S(resolution.W),0.S(resolution.W)) //Constant complex zero
+  val scale = 8.S //Output scaling
 
   val inregs  = Reg(Vec(2, DspComplex(SInt(n.W), SInt(n.W)))) //registers for sampling rate reduction
-  inregs(0):=io.iptr_A
-  inregs(1):=inregs(0)
+  //Would like to do this with foldLeft but could't figure out how.
+  for (i<- 0 to 1) {
+      if (i <=0) inregs(i):=io.iptr_A else inregs(i):=inregs(i-1)
+  }
 
   //The half clock rate domain
   withClock (io.clockp2){
     val slowregs  = Reg(Vec(2, DspComplex(SInt(n.W), SInt(n.W)))) //registers for sampling rate reduction
-    slowregs(0):=inregs(0)
-    slowregs(1):=inregs(1)
+    (slowregs,inregs).zipped.map(_:=_)
 
     // Transposed direct form subfilters. Folding left for the synthesizer
-    // Fir 1
+    val sub1coeffs=coeffs.indices.filter(_ %2==0).map(coeffs(_)) //Even coeffs for Fir1
+    println(sub1coeffs)
     val subfil1= sub1coeffs.map(tap => slowregs(0)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
 
-    // Fir 2
+    val sub2coeffs=coeffs.indices.filter(_ %2==1).map(coeffs(_)) //Odd coeffs for Fir 2
+    println(sub2coeffs)
     val subfil2= sub2coeffs.map(tap => slowregs(1)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
 
     
