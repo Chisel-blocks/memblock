@@ -20,33 +20,33 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
         val Z               = Output(DspComplex(SInt(n.W), SInt(n.W)))
     })
 
-  val czero  = DspComplex(0.S(resolution.W),0.S(resolution.W)) //Constant complex zero
-  val scale = 8.S //Output scaling
-
-  val inregs  = Reg(Vec(2, DspComplex(SInt(n.W), SInt(n.W)))) //registers for sampling rate reduction
-  //Would like to do this with foldLeft but could't figure out how.
-  for (i<- 0 to 1) {
-      if (i <=0) inregs(i):=io.iptr_A else inregs(i):=inregs(i-1)
-  }
-
-  //The half clock rate domain
-  withClock (io.clockp2){
-    val slowregs  = Reg(Vec(2, DspComplex(SInt(n.W), SInt(n.W)))) //registers for sampling rate reduction
-    (slowregs,inregs).zipped.map(_:=_)
-
-    // Transposed direct form subfilters. Folding left for the synthesizer
-    val sub1coeffs=coeffs.indices.filter(_ %2==0).map(coeffs(_)) //Even coeffs for Fir1
-    println(sub1coeffs)
-    val subfil1= sub1coeffs.map(tap => slowregs(0)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
-
-    val sub2coeffs=coeffs.indices.filter(_ %2==1).map(coeffs(_)) //Odd coeffs for Fir 2
-    println(sub2coeffs)
-    val subfil2= sub2coeffs.map(tap => slowregs(1)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
-
+    val czero  = DspComplex(0.S(resolution.W),0.S(resolution.W)) //Constant complex zero
+    val scale = 8.S //Output scaling
     
-    io.Z.real := ((subfil1.real+subfil2.real)*scale)(resolution-1,resolution-n).asSInt
-    io.Z.imag := ((subfil1.imag+subfil2.imag)*scale)(resolution-1,resolution-n).asSInt
-  }
+    val inregs  = Reg(Vec(2, DspComplex(SInt(n.W), SInt(n.W)))) //registers for sampling rate reduction
+    //Would like to do this with foldLeft but could't figure out how.
+    for (i<- 0 to 1) {
+        if (i <=0) inregs(i):=io.iptr_A 
+        else inregs(i):=inregs(i-1)
+    }
+    //The half clock rate domain
+    withClock (io.clockp2){
+        val slowregs  = Reg(Vec(2, DspComplex(SInt(n.W), SInt(n.W)))) //registers for sampling rate reduction
+        (slowregs,inregs).zipped.map(_:=_)
+        
+        // Transposed direct form subfilters. Folding left for the synthesizer
+        val sub1coeffs=coeffs.indices.filter(_ %2==0).map(coeffs(_)) //Even coeffs for Fir1
+        println(sub1coeffs)
+        val subfil1= sub1coeffs.map(tap => slowregs(0)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
+        
+        val sub2coeffs=coeffs.indices.filter(_ %2==1).map(coeffs(_)) //Odd coeffs for Fir 2
+        println(sub2coeffs)
+        val subfil2= sub2coeffs.map(tap => slowregs(1)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
+        
+        
+        io.Z.real := ((subfil1.real+subfil2.real)*scale)(resolution-1,resolution-n).asSInt
+        io.Z.imag := ((subfil1.imag+subfil2.imag)*scale)(resolution-1,resolution-n).asSInt
+    }
 }
 
 
