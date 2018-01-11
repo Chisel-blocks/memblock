@@ -1,7 +1,7 @@
 // This is the testbench of a third order CIC-filter for programmable decimator
 //
 // Intially written by Marko Kosunen 20180110
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 10.01.2018 13:13
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 10.01.2018 18:58
 package cic3
 
 import chisel3._
@@ -15,7 +15,7 @@ object tb_cic3 {
     object tbvars {
       val dutmod = "cic3" 
       val ulimit = 15
-      val clk2="clockp2"
+      val clk2="clockslow"
     }
     val name= this.getClass.getSimpleName.split("\\$").last
     val tb = new BufferedWriter(new FileWriter("./verilog/"+name+".v"))
@@ -25,11 +25,12 @@ object tb_cic3 {
                     |//Things you want to control from the simulator cmdline must be parameters
                     |module tb_{{dutmod}} #( parameter g_infile  = "./A.txt",
                     |                      parameter g_outfile = "./Z.txt",
-                    |                      parameter g_Rs      = 160.0e6
+                    |                      parameter g_Rs      = 640.0e6,
+                    |                      parameter g_Rs_slow = 80.0e6
                     |                      );
                     |//timescale 1ps this should probably be a global model parameter 
                     |parameter integer c_Ts=1/(g_Rs*1e-12);
-                    |parameter integer c_ratio=1.0;
+                    |parameter integer c_ratio=g_Rs/g_Rs_slow;
                     |parameter RESET_TIME = 5*c_Ts;
                     |//These registers always needed
                     |reg clock;
@@ -61,7 +62,7 @@ object tb_cic3 {
                     |//Clock definitions
                     |always #(c_Ts)clock = !clock ;
                     |always @(posedge clock) begin 
-                    |    if (count%c_ratio == 0) begin
+                    |    if (count%(c_ratio/2) == 0) begin
                     |        io_{{clk2}} =! io_{{clk2}};
                     |    end 
                     |    count++;

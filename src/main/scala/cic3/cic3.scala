@@ -3,7 +3,7 @@
 // greater than eight
 //
 // Intially written by Marko Kosunen 20180110
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 10.01.2018 12:07
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 10.01.2018 19:12
 package cic3
 
 import chisel3.experimental._
@@ -20,7 +20,7 @@ class cic3 (n: Int=16, resolution: Int=32, gain: Int=1) extends Module {
   })
     
     //Integrators
-    val integregs  = Reg(Vec(4, DspComplex(SInt(resolution.W), SInt(resolution.W)))) //registers for sampling rate reduction
+    val integregs  = RegInit(Vec(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
     for (i<- 0 to 3) {
       if (i <=0) integregs(i):=io.iptr_A 
       else integregs(i):=integregs(i-1)+integregs(i)
@@ -28,10 +28,18 @@ class cic3 (n: Int=16, resolution: Int=32, gain: Int=1) extends Module {
 
     withClock (io.clockslow){
         //Here we should pay attention to scaling
-        val slowregs  = Reg(Vec(4, DspComplex(SInt(resolution.W), SInt(resolution.W)))) //registers for sampling rate reduction
+        // Registers for sampling rate reduction
+        //val slowregs  = RegInit(Vec.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W)))) //works
+        val slowregs  = RegInit(Vec(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
+        val minusregs = RegInit(Vec(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
         for (i<- 0 to 3) {
-          if (i <=0) slowregs(i):=integregs(3) 
-          else slowregs(i):=slowregs(i-1)-RegNext(slowregs(i-1))
+          if (i <=0) {
+              slowregs(i):=integregs(3) 
+              minusregs(i):=slowregs(i)
+          } else {
+              slowregs(i):=slowregs(i-1)-minusregs(i-1)
+              minusregs(i):=slowregs(i)
+          }
         }
         io.Z.real := slowregs(3).real(resolution-1,resolution-n).asSInt
         io.Z.imag := slowregs(3).imag(resolution-1,resolution-n).asSInt
