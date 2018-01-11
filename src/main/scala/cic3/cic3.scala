@@ -3,7 +3,7 @@
 // greater than eight
 //
 // Intially written by Marko Kosunen 20180110
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 10.01.2018 19:12
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 11.01.2018 15:29
 package cic3
 
 import chisel3.experimental._
@@ -12,9 +12,10 @@ import dsptools._
 import dsptools.numbers._
 import breeze.math.Complex
 
-class cic3 (n: Int=16, resolution: Int=32, gain: Int=1) extends Module {
+class cic3 (n: Int=16, resolution: Int=24, gainbits: Int=10) extends Module {
     val io = IO(new Bundle {
         val clockslow       = Input(Clock())
+        val integscale      = Input(UInt(gainbits.W))
         val iptr_A          = Input(DspComplex(SInt(n.W), SInt(n.W)))
         val Z               = Output(DspComplex(SInt(n.W), SInt(n.W)))
   })
@@ -34,7 +35,10 @@ class cic3 (n: Int=16, resolution: Int=32, gain: Int=1) extends Module {
         val minusregs = RegInit(Vec(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
         for (i<- 0 to 3) {
           if (i <=0) {
-              slowregs(i):=integregs(3) 
+              //Must be another way to do this
+              //slowregs(i):=integregs(3)*io.integscale 
+              slowregs(i).real:=integregs(3).real*io.integscale 
+              slowregs(i).imag:=integregs(3).imag*io.integscale 
               minusregs(i):=slowregs(i)
           } else {
               slowregs(i):=slowregs(i-1)-minusregs(i-1)
