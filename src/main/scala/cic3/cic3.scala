@@ -3,7 +3,7 @@
 // greater than eight
 //
 // Intially written by Marko Kosunen 20180110
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 11.01.2018 15:29
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 11.01.2018 17:13
 package cic3
 
 import chisel3.experimental._
@@ -12,7 +12,7 @@ import dsptools._
 import dsptools.numbers._
 import breeze.math.Complex
 
-class cic3 (n: Int=16, resolution: Int=24, gainbits: Int=10) extends Module {
+class cic3 (n: Int=16, resolution: Int=28, gainbits: Int=10) extends Module {
     val io = IO(new Bundle {
         val clockslow       = Input(Clock())
         val integscale      = Input(UInt(gainbits.W))
