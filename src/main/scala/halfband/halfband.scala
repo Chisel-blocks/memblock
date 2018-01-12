@@ -3,25 +3,21 @@ package halfband
 
 import chisel3.experimental._
 import chisel3._
-import datatypes._
-import halfband_BW_045_N_40._
-import chisel3.experimental._
-import chisel3._
-import datatypes._
 import halfband_BW_045_N_40._
 import dsptools._
 import dsptools.numbers._
 import breeze.math.Complex
 
-class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5)) extends Module {
+class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5), gainbits: Int=10) extends Module {
     val io = IO(new Bundle {
-        val clockp2       = Input(Clock())
+        val clockp2         = Input(Clock())
+        val scale           = Input(UInt(gainbits.W))
         val iptr_A          = Input(DspComplex(SInt(n.W), SInt(n.W)))
         val Z               = Output(DspComplex(SInt(n.W), SInt(n.W)))
     })
 
     val czero  = DspComplex(0.S(resolution.W),0.S(resolution.W)) //Constant complex zero
-    val scale = 8.S //Output scaling
+    //val scale = 8.S //Output scaling
     
     val inregs  = Reg(Vec(2, DspComplex(SInt(n.W), SInt(n.W)))) //registers for sampling rate reduction
     //Would like to do this with foldLeft but could't figure out how.
@@ -44,8 +40,8 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
         val subfil2= sub2coeffs.map(tap => slowregs(1)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
         
         
-        io.Z.real := ((subfil1.real+subfil2.real)*scale)(resolution-1,resolution-n).asSInt
-        io.Z.imag := ((subfil1.imag+subfil2.imag)*scale)(resolution-1,resolution-n).asSInt
+        io.Z.real := ((subfil1.real+subfil2.real)*io.scale)(resolution-1,resolution-n).asSInt
+        io.Z.imag := ((subfil1.imag+subfil2.imag)*io.scale)(resolution-1,resolution-n).asSInt
     }
 }
 
