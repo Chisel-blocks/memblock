@@ -10,7 +10,6 @@ import breeze.math.Complex
 
 class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5), gainbits: Int=10) extends Module {
     val io = IO(new Bundle {
-        val clock_high      = Input(Clock())
         val clock_low       = Input(Clock())
         val scale           = Input(UInt(gainbits.W))
         val iptr_A          = Input(DspComplex(SInt(n.W), SInt(n.W)))
@@ -21,12 +20,10 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
     //val scale = 8.S //Output scaling
     val inregs  = Reg(Vec(2, DspComplex(SInt(n.W), SInt(n.W)))) //registers for sampling rate reduction
     //Would like to do this with foldLeft but could't figure out how.
-    withClock (io.clock_high){
         for (i<- 0 to 1) {
             if (i <=0) inregs(i):=io.iptr_A 
             else inregs(i):=inregs(i-1)
         }
-    }
     //The half clock rate domain
     withClock (io.clock_low){
         val slowregs  = Reg(Vec(2, DspComplex(SInt(n.W), SInt(n.W)))) //registers for sampling rate reduction

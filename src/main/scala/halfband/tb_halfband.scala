@@ -22,8 +22,7 @@ object tb_halfband {
       val ulimit=resolution-n-1
       val gainbits= 10
       val gainlimit=gainbits-1
-      val clk0="clock_high"
-      val clk1="clock_low"
+      val clk0="clock_low"
       val sig0="scale"
     }
     //simple template that uses handlebars to input buswidth definition
@@ -44,7 +43,7 @@ object tb_halfband {
                     |reg reset;
                     |
                     |//Registers for additional clocks
-                    |reg io_{{clk1}};
+                    |reg io_{{clk0}};
                     |
                     |//Registers for inputs
                     |reg signed [{{ulimit}}:0] io_iptr_A_real = 0;
@@ -57,13 +56,13 @@ object tb_halfband {
                     |
                     |//File IO parameters
                     |integer StatusI, StatusO, infile, outfile;
-                    |integer count1;
+                    |integer count0;
                     |integer din1,din2;
                     |
                     |//Initializations
-                    |initial count1 = 0;
+                    |initial count0 = 0;
                     |initial clock = 1'b0;
-                    |initial io_{{clk1}}= 1'b0;
+                    |initial io_{{clk0}}= 1'b0;
                     |initial reset = 1'b0;
                     |initial outfile = $fopen(g_outfile,"w"); // For writing
                     |
@@ -71,13 +70,13 @@ object tb_halfband {
                     |always #(c_Ts)clock = !clock ;
                     |
                     |always @(posedge clock) begin 
-                    |    if (count1%c_ratio0/2 == 0) begin
-                    |        io_{{clk1}} =! io_{{clk1}};
+                    |    if (count0%c_ratio0/2 == 0) begin
+                    |        io_{{clk0}} =! io_{{clk0}};
                     |    end 
-                    |    count1++;
+                    |    count0++;
                     |end
                     |
-                    |always @(posedge io_{{clk1}}) begin 
+                    |always @(posedge io_{{clk0}}) begin 
                     |    //Print only valid values 
                     |    if (~($isunknown( io_Z_real)) &&   ~($isunknown( io_Z_imag))) begin
                     |        $fwrite(outfile, "%d\t%d\n", io_Z_real, io_Z_imag);
@@ -90,8 +89,7 @@ object tb_halfband {
                     |halfband DUT( 
                     |    .clock(clock),
                     |    .reset(reset),
-                    |    .io_{{clk0}}(clock), 
-                    |    .io_{{clk1}}(io_{{clk1}}), 
+                    |    .io_{{clk0}}(io_{{clk0}}), 
                     |    .io_{{sig0}}(io_{{sig0}}), 
                     |    .io_iptr_A_real(io_iptr_A_real), 
                     |    .io_iptr_A_imag(io_iptr_A_imag), 

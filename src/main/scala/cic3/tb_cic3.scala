@@ -1,7 +1,7 @@
 // This is the testbench of a third order CIC-filter for programmable decimator
 //
 // Intially written by Marko Kosunen 20180110
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 11.01.2018 14:48
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 12.01.2018 11:39
 package cic3
 
 import chisel3._
@@ -50,7 +50,7 @@ object tb_cic3 {
                     |reg signed [{{ulimit}}:0] io_iptr_A_imag = 0;
                     |reg signed [{{gainlimit}}:0] io_integscale;
                     |
-                    |//resisters fir outputs
+                    |//resisters for outputs
                     |wire signed [{{ulimit}}:0] io_Z_real;
                     |wire signed [{{ulimit}}:0] io_Z_imag;
                     |
