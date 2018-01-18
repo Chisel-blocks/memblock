@@ -12,51 +12,72 @@ import com.gilt.handlebars.scala.Handlebars
 //Testbench.
 object tb_halfband {
   def main(args: Array[String]): Unit = {
-    object tbvars {
-      val dutmod = "halfband" 
-      val ulimit = 15
-      val clk2="clockp2"
-    }
     val name= this.getClass.getSimpleName.split("\\$").last
     val tb = new BufferedWriter(new FileWriter("./verilog/"+name+".v"))
+    object tbvars {
+      val oname=name
+      val dutmod = "halfband" 
+      val n = 16
+      val resolution=32
+      val ulimit=resolution-n-1
+      val gainbits= 10
+      val gainlimit=gainbits-1
+      val clk0="clock_high"
+      val clk1="clock_low"
+      val sig0="scale"
+    }
     //simple template that uses handlebars to input buswidth definition
     val textTemplate="""//This is a tesbench generated with scala generator
                     |//Things you want to control from the simulator cmdline must be parameters
                     |module tb_halfband #( parameter g_infile  = "./A.txt",
                     |                      parameter g_outfile = "./Z.txt",
-                    |                      parameter g_Rs      = 160.0e6
+                    |                      parameter g_scale   = 1,
+                    |                      parameter g_Rs_high = 160.0e6
                     |                      );
                     |//timescale 1ps this should probably be a global model parameter 
-                    |parameter integer c_Ts=1/(g_Rs*1e-12);
-                    |parameter integer c_ratio=1.0;
+                    |parameter integer c_Ts=1/(g_Rs_high*1e-12);
+                    |parameter integer c_ratio0=2.0;
                     |parameter RESET_TIME = 5*c_Ts;
+                    |
+                    |//These registers always needed
+                    |reg clock;
+                    |reg reset;
+                    |
+                    |//Registers for additional clocks
+                    |reg io_{{clk1}};
+                    |
+                    |//Registers for inputs
                     |reg signed [{{ulimit}}:0] io_iptr_A_real = 0;
                     |reg signed [{{ulimit}}:0] io_iptr_A_imag = 0;
-                    |reg io_Z;
-                    |reg clock;
-                    |reg io_{{clk2}};
-                    |reg reset;
+                    |reg signed [{{gainlimit}}:0] io_{{sig0}};
+                    |
+                    |//Resisters for outputs
                     |wire signed [{{ulimit}}:0] io_Z_real;
                     |wire signed [{{ulimit}}:0] io_Z_imag;
                     |
+                    |//File IO parameters
                     |integer StatusI, StatusO, infile, outfile;
-                    |integer count;
+                    |integer count1;
                     |integer din1,din2;
                     |
-                    |initial count = 0;
+                    |//Initializations
+                    |initial count1 = 0;
                     |initial clock = 1'b0;
-                    |initial io_{{clk2}}= 1'b0;
+                    |initial io_{{clk1}}= 1'b0;
                     |initial reset = 1'b0;
                     |initial outfile = $fopen(g_outfile,"w"); // For writing
+                    |
+                    |//Clock definitions
                     |always #(c_Ts)clock = !clock ;
+                    |
                     |always @(posedge clock) begin 
-                    |    if (count%c_ratio == 0) begin
-                    |        io_{{clk2}} =! io_{{clk2}};
+                    |    if (count1%c_ratio0/2 == 0) begin
+                    |        io_{{clk1}} =! io_{{clk1}};
                     |    end 
-                    |    count++;
+                    |    count1++;
                     |end
                     |
-                    |always @(posedge io_{{clk2}}) begin 
+                    |always @(posedge io_{{clk1}}) begin 
                     |    //Print only valid values 
                     |    if (~($isunknown( io_Z_real)) &&   ~($isunknown( io_Z_imag))) begin
                     |        $fwrite(outfile, "%d\t%d\n", io_Z_real, io_Z_imag);
@@ -67,16 +88,19 @@ object tb_halfband {
                     |end
                     |
                     |halfband DUT( 
-                    |.clock(clock),
-                    |.reset(reset),
-                    |.io_clockp2(io_{{clk2}}), 
-                    |.io_iptr_A_real(io_iptr_A_real), 
-                    |.io_iptr_A_imag(io_iptr_A_imag), 
-                    |.io_Z_real(io_Z_real), 
-                    |.io_Z_imag(io_Z_imag) 
+                    |    .clock(clock),
+                    |    .reset(reset),
+                    |    .io_{{clk0}}(clock), 
+                    |    .io_{{clk1}}(io_{{clk1}}), 
+                    |    .io_{{sig0}}(io_{{sig0}}), 
+                    |    .io_iptr_A_real(io_iptr_A_real), 
+                    |    .io_iptr_A_imag(io_iptr_A_imag), 
+                    |    .io_Z_real(io_Z_real), 
+                    |    .io_Z_imag(io_Z_imag) 
                     |);
                     |
                     |initial #0 begin
+                    |    io_{{sig0}} = g_scale;
                     |    reset=1;
                     |    #RESET_TIME
                     |    reset=0;
