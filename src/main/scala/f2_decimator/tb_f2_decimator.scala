@@ -22,14 +22,16 @@ object tb_f2_decimator {
       val ulimit=resolution-n-1
       val gainbits= 10
       val gainlimit=gainbits-1
-      val clk0="cic3clockslow"
-      val clk1="hb1clock_low"
-      val clk2="hb2clock_low"
-      val clk3="hb3clock_low"
-      val sig0="cic3integscale"
-      val sig1="hb1scale"
-      val sig2="hb2scale"
-      val sig3="hb3scale"
+      val clk0="controls_cic3clockslow"
+      val clk1="controls_hb1clock_low"
+      val clk2="controls_hb2clock_low"
+      val clk3="controls_hb3clock_low"
+      val sig0="controls_cic3integscale"
+      val sig1="controls_hb1scale"
+      val sig2="controls_hb2scale"
+      val sig3="controls_hb3scale"
+      val sig4="controls_mode"
+      val sig4limit=2
     }
     //simple template that uses handlebars to input buswidth definition
     val textTemplate="""//This is a tesbench generated with scala generator
@@ -41,7 +43,8 @@ object tb_f2_decimator {
                     |                      parameter g_scale0   = 1,
                     |                      parameter g_scale1   = 1,
                     |                      parameter g_scale2   = 1,
-                    |                      parameter g_scale3   = 1
+                    |                      parameter g_scale3   = 1,
+                    |                      parameter g_mode     = 4
                     |                      );
                     |//timescale 1ps this should probably be a global model parameter 
                     |parameter integer c_Ts=1/(g_Rs_high*1e-12);
@@ -69,6 +72,7 @@ object tb_f2_decimator {
                     |reg signed [{{gainlimit}}:0] io_{{sig1}};
                     |reg signed [{{gainlimit}}:0] io_{{sig2}};
                     |reg signed [{{gainlimit}}:0] io_{{sig3}};
+                    |reg signed [{{sig4limit}}:0] io_{{sig4}};
                     |
                     |//Resisters for outputs
                     |wire signed [{{ulimit}}:0] io_Z_real;
@@ -148,6 +152,7 @@ object tb_f2_decimator {
                     |    .io_{{sig1}}(io_{{sig1}}), // @[:@3743.4]
                     |    .io_{{sig2}}(io_{{sig2}}), // @[:@3743.4]
                     |    .io_{{sig3}}(io_{{sig3}}), // @[:@3743.4]
+                    |    .io_{{sig4}}(io_{{sig4}}), // @[:@3743.4]
                     |    .io_iptr_A_real, // @[:@3743.4]
                     |    .io_iptr_A_imag, // @[:@3743.4]
                     |    .io_Z_real, // @[:@3743.4]
@@ -159,6 +164,7 @@ object tb_f2_decimator {
                     |    io_{{sig1}} = g_scale1;
                     |    io_{{sig2}} = g_scale2;
                     |    io_{{sig3}} = g_scale3;
+                    |    io_{{sig4}} = g_mode;
                     |    reset=1;
                     |    #RESET_TIME
                     |    reset=0;
