@@ -26,6 +26,7 @@ class f2_dsp_tapein0 (n: Int=16, users: Int=2) extends Module {
   decimator.io.iptr_A:=io.iptr_A
   
   for ( i <- 0 to users-1 ) { 
+      //How to use Valid?
       io.Z(i):=decimator.io.Z
   }
 }
