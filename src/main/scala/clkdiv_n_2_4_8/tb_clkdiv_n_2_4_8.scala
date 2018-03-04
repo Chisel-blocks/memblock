@@ -51,6 +51,7 @@ object tb_clkdiv_n_2_4_8 {
                     |
                     |//Initializations
                     |initial reset = 1'b0;
+                    |initial {{sig1}} = 1'b0;
                     |
                     |//Clock definitions
                     |always #(c_Ts)clock = !clock ;
@@ -69,9 +70,11 @@ object tb_clkdiv_n_2_4_8 {
                     |
                     |initial #0 begin
                     |    io_{{sig0}} = 8'd4;
+                    |    io_{{sig1}} = 0;
                     |    reset=1;
                     |    #RESET_TIME
                     |    reset=0;
+                    |    io_{{sig1}} = 0;
                     |    #SIM_TIME
                     |    $finish;
                     |end
