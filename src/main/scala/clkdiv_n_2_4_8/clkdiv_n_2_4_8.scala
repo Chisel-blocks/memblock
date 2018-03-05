@@ -1,6 +1,6 @@
 // Clk divider. Initiallyl  written by Marko Kosunen
 // Divides input clock by N, 2N , 4N and 8N
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 03.03.2018 23:17
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 04.03.2018 18:13
 package clkdiv_n_2_4_8
 
 import chisel3.experimental._
@@ -25,42 +25,66 @@ class clkdiv_n_2_4_8 (n: Int=8) extends Module {
     en  := !io.reset_clk 
 
     val count=RegInit(0.U(n.W))
-    val sregs=RegInit(Vec(Seq.fill(4)(false.B)))
+    
+    val creg=RegInit(false.B)
+    val cclock = creg.asClock
+    val sregs=withClock(cclock)(RegInit(Vec(Seq.fill(4)(false.B))))
+
+    //wires to implement asynchronous reset
     val clocks=sregs.map(x =>x.asClock)
 
     when ( en ) {
         when (count === io.Ndiv) {
-            count := count+1.U(1.W)
-            sregs(0) := true.B
+            count:=0.U
+            creg := true.B
         } .otherwise {
-         count:=0.U
-         sregs(0):= false.B
+         count := count+1.U(1.W)
+         creg:= false.B
         }
     }
     val enN = RegInit(false.B) 
     enN := en
 
-    //Enable registers. Could be looped, this is for clarity
-    val en2 = withClockAndReset(clocks(0),en)(RegInit(false.B))
-    val en4 = withClockAndReset(clocks(1),en)(RegInit(false.B))
-    val en8 = withClockAndReset(clocks(2),en)(RegInit(false.B))
+    //Enable registers. We need to delay the enable by one clock pulse in order
+    // to get the feedbacks reseted
+    val en2 = withClock(cclock)(RegInit(false.B))
+    val en2del = withClock(cclock)(RegInit(false.B))
+    //val enout = withClock(cclock)(RegInit(false.B))
+    val en4 = withClock(clocks(1))(RegInit(false.B))
+    val en8 = withClock(clocks(2))(RegInit(false.B))
+    val reset_out = Wire(Bool())
 
     //Chaining the enables
-    en2 := enN
-    en4 := en2
-    en8 := en4
-    val enchain = Seq(enN,en2,en4,en8)
-    val allzp = Seq.fill(4)(Wire(Bool()))
-    
-    //Three stages for division
-    allzp(0):=true.B
-    val outregs=RegInit(Vec(Seq.fill(4)(false.B)))
-    outregs(0):=sregs(0)
+    en2 := (enN & en)
+    en2del := en2 & en
+    reset_out := ! (en2del)
+    en4 := en2del & en
+    en8 := en4 & en
+    val enchain = Seq(enN,en2del,en4,en8)
+
+    // Monitors if the all previous stages are zero
+    val allzp = Wire(Vec(4,Bool()))
+    allzp(0) := false.B
     for ( i <- 1 to 3) {
-       sregs(i):= (enchain(i) & allzp(i-i)) ^ sregs(i)
-       allzp(i) := allzp(i-1) & (!sregs(i))
-       //Pure registers at the output
-       outregs(i):=sregs(i)
+        allzp(i):= allzp(i-1) && !sregs(i)
+        //allzp(i):= false.B
+    }
+    val outregs=withReset(reset_out)(RegInit(Vec(Seq.fill(4)(false.B))))
+    outregs(0):=creg
+
+    for ( i <- 1 to 3) {
+       allzp(0):= true.B //First stage always toggles
+       when (en2) { 
+           when ( (enchain(i) && allzp(i-1)) ) {
+              sregs(i):= ! sregs(i)
+           } .otherwise { 
+               sregs(i):=sregs(i)
+           }
+       } .otherwise { 
+           sregs(i)    := false.B  
+     }
+     //Pure registers at the output
+     outregs(i):=sregs(i)
     }
 
     io.clkpn  := outregs(0)
