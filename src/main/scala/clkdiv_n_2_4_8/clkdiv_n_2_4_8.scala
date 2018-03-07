@@ -1,6 +1,6 @@
 // Clk divider. Initiallyl  written by Marko Kosunen
 // Divides input clock by N, 2N , 4N and 8N
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 05.03.2018 09:44
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 05.03.2018 15:28
 package clkdiv_n_2_4_8
 
 import chisel3.experimental._
@@ -82,7 +82,11 @@ class clkdiv_n_2_4_8 (n: Int=8) extends Module {
      outregs(i):=stateregisters(i)
     }
 
-    io.clkpn  := RegNext(outregs(0))
+    when ( io.Ndiv-1=== 0.U(n.W) ) {
+        io.clkpn := clock.asUInt
+    } .otherwise {
+        io.clkpn  := RegNext(outregs(0))
+    }
     io.clkp2n := outregs(1)
     io.clkp4n := outregs(2)
     io.clkp8n := outregs(3)

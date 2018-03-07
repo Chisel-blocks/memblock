@@ -60,12 +60,6 @@ object tb_f2_decimator {
                     |reg clock;
                     |reg reset;
                     |
-                    |//Registers for additional clocks
-                    |//reg io_{{clk0}};
-                    |//reg io_{{clk1}};
-                    |//reg io_{{clk2}};
-                    |//reg io_{{clk3}};
-                    |
                     |//register to set the clock division ratio
                     |reg [7:0] io_Ndiv;
                     |reg io_reset_clk;
@@ -82,6 +76,10 @@ object tb_f2_decimator {
                     |//Resisters for outputs
                     |wire signed [{{ulimit}}:0] io_Z_real;
                     |wire signed [{{ulimit}}:0] io_Z_imag;
+                    |wire io_{{clk0}};
+                    |wire io_{{clk1}};
+                    |wire io_{{clk2}};
+                    |wire io_{{clk3}};
                     |
                     |//File IO parameters
                     |integer StatusI, StatusO, infile, outfile;
@@ -92,18 +90,10 @@ object tb_f2_decimator {
                     |integer din1,din2;
                     |
                     |//Initializations
-                    |//initial count0 = 0;
-                    |//initial count1 = 0;
-                    |//initial count2 = 0;
-                    |//initial count3 = 0;
                     |initial clock = 1'b0;
-                    |//initial io_{{clk0}}= 1'b0;
-                    |//initial io_{{clk1}}= 1'b0;
-                    |//initial io_{{clk2}}= 1'b0;
-                    |//initial io_{{clk3}}= 1'b0;
                     |initial reset = 1'b0;
                     |initial io_reset_clk = 1'b0;
-                    |//initial io_{{sig1}} =$realtobits($itor(g_scale));
+                    |initial io_Ndiv = c_ratio0;
                     |initial outfile = $fopen(g_outfile,"w"); // For writing
                     |
                     |//Clock definitions
@@ -152,10 +142,10 @@ object tb_f2_decimator {
                     |  .reset(reset), // @[:@5.4]
                     |  .io_Ndiv(io_Ndiv), // @[:@6.4]
                     |  .io_reset_clk(io_reset_clk), // @[:@6.4]
-                    |  .io_clkpn (io_{{clk0}}, // @[:@6.4]
-                    |  .io_clkp2n(io_{{clk1}}, // @[:@6.4]
-                    |  .io_clkp4n(io_{{clk2}}, // @[:@6.4]
-                    |  .io_clkp8n(io_{{clk3}}// @[:@6.4]
+                    |  .io_clkpn (io_{{clk0}}), // @[:@6.4]
+                    |  .io_clkp2n(io_{{clk1}}), // @[:@6.4]
+                    |  .io_clkp4n(io_{{clk2}}), // @[:@6.4]
+                    |  .io_clkp8n(io_{{clk3}})// @[:@6.4]
                     |);
                     |
                     |//DUT definition
@@ -183,6 +173,7 @@ object tb_f2_decimator {
                     |    io_{{sig2}} = g_scale2;
                     |    io_{{sig3}} = g_scale3;
                     |    io_{{sig4}} = g_mode;
+                    |    io_Ndiv= c_ratio0;
                     |    reset=1;
                     |    io_reset_clk=1;
                     |    #RESET_TIME
@@ -205,5 +196,4 @@ object tb_f2_decimator {
   tb.close()
   }
 }
-
 

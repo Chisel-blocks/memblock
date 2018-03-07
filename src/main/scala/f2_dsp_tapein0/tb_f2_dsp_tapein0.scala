@@ -1,7 +1,9 @@
 // See LICENSE for license details.
-//Look at handlebars
+// Use handlebars for template generation
 //
 //Start with a static tb and try to genererate a gnerator for it
+// This uses clkdiv_n_2_4_8 verilog. You need to compile it separately
+
 package f2_dsp_tapein0
 
 import chisel3._
@@ -10,10 +12,6 @@ import com.gilt.handlebars.scala.binding.dynamic._
 import com.gilt.handlebars.scala.Handlebars
 
 //Testbench.
-
-
-
-
 object tb_f2_dsp_tapein0 {
     def extpargen(): String={
         val extpars=Seq(("g_infile","\"./A.txt\""), 
@@ -69,12 +67,9 @@ object tb_f2_dsp_tapein0 {
                         |reg clock;
                         |reg reset;
                         |
-                        |//Registers for additional clocks
-                        |reg io_{{clk0}};
-                        |reg io_{{clk1}};
-                        |reg io_{{clk2}};
-                        |reg io_{{clk3}};
-                        |
+                        |//register to set the clock division ratio
+                        |reg [7:0] io_Ndiv;
+                        |reg io_reset_clk;
                         |
                         |//Registers for inputs
                         |reg signed [{{ulimit}}:0] io_iptr_A_real = 0;
@@ -91,6 +86,12 @@ object tb_f2_dsp_tapein0 {
                         |wire signed [{{ulimit}}:0] io_Z_1_real;
                         |wire signed [{{ulimit}}:0] io_Z_1_imag;
                         |
+                        |//Wires for additional clocks
+                        |wire io_{{clk0}};
+                        |wire io_{{clk1}};
+                        |wire io_{{clk2}};
+                        |wire io_{{clk3}};
+
                         |//File IO parameters
                         |integer StatusI, StatusO, infile, outfile;
                         |integer count0;
@@ -105,40 +106,35 @@ object tb_f2_dsp_tapein0 {
                         |initial count2 = 0;
                         |initial count3 = 0;
                         |initial clock = 1'b0;
-                        |initial io_{{clk0}}= 1'b0;
-                        |initial io_{{clk1}}= 1'b0;
-                        |initial io_{{clk2}}= 1'b0;
-                        |initial io_{{clk3}}= 1'b0;
                         |initial reset = 1'b0;
-                        |//initial io_{{sig1}} =$realtobits($itor(g_scale));
                         |initial outfile = $fopen(g_outfile,"w"); // For writing
                         |
                         |//Clock definitions
                         |always #(c_Ts)clock = !clock ;
-                        |always @(posedge clock) begin 
-                        |    if (count0%c_ratio0/2 == 0) begin
-                        |        io_{{clk0}} =! io_{{clk0}};
-                        |    end 
-                        |    count0++;
-                        |end
-                        |always @(posedge clock) begin 
-                        |    if (count1%c_ratio1/2 == 0) begin
-                        |        io_{{clk1}} =! io_{{clk1}};
-                        |    end 
-                        |    count1++;
-                        |end
-                        |always @(posedge clock) begin 
-                        |    if (count2%c_ratio2/2 == 0) begin
-                        |        io_{{clk2}} =! io_{{clk2}};
-                        |    end 
-                        |    count2++;
-                        |end
-                        |always @(posedge clock) begin 
-                        |    if (count3%c_ratio3/2 == 0) begin
-                        |        io_{{clk3}} =! io_{{clk3}};
-                        |    end 
-                        |    count3++;
-                        |end
+                        |//always @(posedge clock) begin 
+                        |//    if (count0%c_ratio0/2 == 0) begin
+                        |//        io_{{clk0}} =! io_{{clk0}};
+                        |//    end 
+                        |//    count0++;
+                        |//end
+                        |//always @(posedge clock) begin 
+                        |//    if (count1%c_ratio1/2 == 0) begin
+                        |//        io_{{clk1}} =! io_{{clk1}};
+                        |//    end 
+                        |//    count1++;
+                        |//end
+                        |//always @(posedge clock) begin 
+                        |//    if (count2%c_ratio2/2 == 0) begin
+                        |//        io_{{clk2}} =! io_{{clk2}};
+                        |//    end 
+                        |//    count2++;
+                        |//end
+                        |//always @(posedge clock) begin 
+                        |//    if (count3%c_ratio3/2 == 0) begin
+                        |//        io_{{clk3}} =! io_{{clk3}};
+                        |//    end 
+                        |//    count3++;
+                        |//end
                         | 
                         |//always @(posedge io_{{clk0}}) begin 
                         |//always @(posedge io_{{clk1}}) begin 
@@ -152,6 +148,18 @@ object tb_f2_dsp_tapein0 {
                         |        $fwrite(outfile, "%d\t%d\t%d\t%d\n",0,0,0,0);
                         |    end 
                         |end
+                        |
+                        |//Clock divider model
+                        |clkdiv_n_2_4_8 clockdiv( // @[:@3.2]
+                        |  .clock(clock), // @[:@4.4]
+                        |  .reset(reset), // @[:@5.4]
+                        |  .io_Ndiv(io_Ndiv), // @[:@6.4]
+                        |  .io_reset_clk(io_reset_clk), // @[:@6.4]
+                        |  .io_clkpn (io_{{clk0}}), // @[:@6.4]
+                        |  .io_clkp2n(io_{{clk1}}), // @[:@6.4]
+                        |  .io_clkp4n(io_{{clk2}}), // @[:@6.4]
+                        |  .io_clkp8n(io_{{clk3}})// @[:@6.4]
+                        |);
                         |
                         |//DUT definition
                         |{{dutmod}} DUT ( // @[:@3740.2]
@@ -180,9 +188,12 @@ object tb_f2_dsp_tapein0 {
                         |    io_{{sig2}} = g_scale2;
                         |    io_{{sig3}} = g_scale3;
                         |    io_{{sig4}} = g_mode;
+                        |    io_Ndiv= c_ratio0;
                         |    reset=1;
+                        |    io_reset_clk=1;
                         |    #RESET_TIME
                         |    reset=0;
+                        |    io_reset_clk=0;
                         |    infile = $fopen(g_infile,"r"); // For reading
                         |    while (!$feof(infile)) begin
                         |            @(posedge clock) 
