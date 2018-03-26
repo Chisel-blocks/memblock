@@ -3,7 +3,7 @@
 // greater than eight
 //
 // Intially written by Marko Kosunen 20180110
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 11.01.2018 17:13
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 25.03.2018 18:56
 package cic3
 
 import chisel3.experimental._
@@ -21,7 +21,7 @@ class cic3 (n: Int=16, resolution: Int=28, gainbits: Int=10) extends Module {
   })
     
     //Integrators
-    val integregs  = RegInit(Vec(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
+    val integregs  = RegInit(VecInit(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
     for (i<- 0 to 3) {
       if (i <=0) integregs(i):=io.iptr_A 
       else integregs(i):=integregs(i-1)+integregs(i)
@@ -31,8 +31,8 @@ class cic3 (n: Int=16, resolution: Int=28, gainbits: Int=10) extends Module {
         //Here we should pay attention to scaling
         // Registers for sampling rate reduction
         //val slowregs  = RegInit(Vec.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W)))) //works
-        val slowregs  = RegInit(Vec(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
-        val minusregs = RegInit(Vec(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
+        val slowregs  = RegInit(VecInit(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
+        val minusregs = RegInit(VecInit(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
         for (i<- 0 to 3) {
           if (i <=0) {
               //Must be another way to do this

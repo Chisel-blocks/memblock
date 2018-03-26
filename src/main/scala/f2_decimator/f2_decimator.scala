@@ -25,15 +25,15 @@ class f2_decimator_controls(gainbits: Int) extends f2_decimator_clocks {
         val hb2scale        = Input(UInt(gainbits.W))
         val hb3scale        = Input(UInt(gainbits.W))
         val mode            = Input(UInt(3.W))
+        override def cloneType = (new f2_decimator_controls(gainbits)).asInstanceOf[this.type]
 }
 
 class f2_decimator_io(n: Int, gainbits: Int) extends Bundle {
         val controls        = new f2_decimator_controls(gainbits=gainbits)
         val iptr_A          = Input(DspComplex(SInt(n.W), SInt(n.W)))
         val Z               = Output(DspComplex(SInt(n.W), SInt(n.W)))
+        override def cloneType = (new f2_decimator_io(n,gainbits)).asInstanceOf[this.type]
 }
-
-
 
 class f2_decimator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits: Int=10) extends Module {
     val io = IO(new f2_decimator_io(n=n,gainbits=gainbits)
