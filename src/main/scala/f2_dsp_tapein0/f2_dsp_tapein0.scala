@@ -14,7 +14,7 @@ class f2_dsp_io(n: Int=16, users: Int=2 ) extends Bundle {
     val decimator_controls = new f2_decimator_controls(gainbits=10)
     val iptr_A      = Input(DspComplex(SInt(n.W), SInt(n.W)))
     val Z           = Output(Vec(users,DspComplex(SInt(n.W), SInt(n.W))))
-
+    override def cloneType = (new f2_dsp_io(n,users)).asInstanceOf[this.type]
 }
 
 class f2_dsp_tapein0 (n: Int=16, users: Int=2) extends Module {

@@ -18,7 +18,7 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
 
     val czero  = DspComplex(0.S(resolution.W),0.S(resolution.W)) //Constant complex zero
     //val scale = 8.S //Output scaling
-    val inregs  = RegInit(Vec(Seq.fill(2)(DspComplex.wire(0.S(n.W), 0.S(n.W))))) //registers for sampling rate reduction
+    val inregs  = RegInit(VecInit(Seq.fill(2)(DspComplex.wire(0.S(n.W), 0.S(n.W))))) //registers for sampling rate reduction
     //Would like to do this with foldLeft but could't figure out how.
         for (i<- 0 to 1) {
             if (i <=0) inregs(i):=io.iptr_A 
@@ -26,7 +26,7 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
         }
     //The half clock rate domain
     withClock (io.clock_low){
-        val slowregs  = RegInit(Vec(Seq.fill(2)(DspComplex.wire(0.S(n.W), 0.S(n.W))))) //registers for sampling rate reduction
+        val slowregs  = RegInit(VecInit(Seq.fill(2)(DspComplex.wire(0.S(n.W), 0.S(n.W))))) //registers for sampling rate reduction
         (slowregs,inregs).zipped.map(_:=_)
         
         // Transposed direct form subfilters. Folding left for the synthesizer
