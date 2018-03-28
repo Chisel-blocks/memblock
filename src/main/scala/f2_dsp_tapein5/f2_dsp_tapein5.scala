@@ -46,6 +46,7 @@ class f2_dsp_tapein5 (n: Int=16, antennas: Int=4, users: Int=4) extends Module {
     val w_Z=  Wire(Vec(4,DspComplex(SInt(n.W), SInt(n.W))))
     val w_index=  Wire(UInt(2.W))
    
+    // First we generate all possible output signals, then we just select The one we want.
     //Generate the sum of users
     val sumusersstream = withClock(io.clock_symrate)(RegInit(VecInit(Seq.fill(users)(DspComplex.wire(0.S(n.W), 0.S(n.W))))))
     
@@ -61,10 +62,11 @@ class f2_dsp_tapein5 (n: Int=16, antennas: Int=4, users: Int=4) extends Module {
         selrx(user):=rx_path(io.antenna_index).Z(user)
     }
   
-    //All users, single antenna
+    //Single users, single antenna
     val selrxuser = withClock(io.clock_symrate)(RegInit(DspComplex.wire(0.S(n.W), 0.S(n.W))))
     selrxuser:=rx_path(io.antenna_index).Z(io.user_index)
   
+
     //State counter to select the user or branch to the output
     val index=withClock(io.clock_symratex4)(RegInit(0.U(n.W)))
     when ( ! io.reset_index_count ) {
@@ -87,28 +89,31 @@ class f2_dsp_tapein5 (n: Int=16, antennas: Int=4, users: Int=4) extends Module {
     for ( uindex <-0 to 3){
       indexedrxstream(uindex):=rx_path(index).Z(uindex)
     }
-   
-   val bypass :: select_users  :: select_antennas :: select_both :: stream_users :: stream_rx :: stream_sum :: Nil = Enum(7)
+
+
+    //Selection part starts here
+    //State definiotions for the selected mode. Just to map numbers to understandable labels
+    val bypass :: select_users  :: select_antennas :: select_both :: stream_users :: stream_rx :: stream_sum :: Nil = Enum(7)
     //Select state
-    val state=RegInit(bypass)
+    val mode=RegInit(bypass)
     
     //Decoder for the modes
     when(io.output_mode===0.U){
-        state := bypass
+        mode := bypass
     } .elsewhen(io.output_mode===1.U) {
-        state := select_users
+        mode := select_users
     } .elsewhen(io.output_mode===2.U) {
-        state:=select_antennas
+        mode:=select_antennas
     } .elsewhen(io.output_mode===3.U) {
-        state:=select_both
+        mode:=select_both
     } .elsewhen(io.output_mode===4.U) {
-        state:=stream_users
+        mode:=stream_users
     } .elsewhen(io.output_mode===5.U) {
-        state:=stream_rx
+        mode:=stream_rx
     } .elsewhen(io.output_mode===6.U) {
-        state:=stream_sum
+        mode:=stream_sum
     }.otherwise {
-        state := bypass
+        mode := bypass
     }
 
     // Fifo for ther output
@@ -120,17 +125,42 @@ class f2_dsp_tapein5 (n: Int=16, antennas: Int=4, users: Int=4) extends Module {
     //Defaults
     outfifo.io.enq_reset:=io.reset_outfifo 
     outfifo.io.deq_reset:=io.reset_outfifo
-    outfifo.io.enq_clock:=io.clock_symrate
-    outfifo.io.enq.valid:=withClock(io.clock_symrate)(RegNext(true.B))
     outfifo.io.deq.ready:=io.Z.ready
     outfifo.io.deq_clock:=io.clock_outfifo_deq
+    outfifo.io.enq_clock:=io.clock_symratex4
     w_index := withClock(io.clock_symrate)(RegNext(0.U))
-    io.Z.valid   := true.B
+    io.Z.valid   := outfifo.io.deq.valid
+    //Put something out if nothig else defined
     for (i <- 0 to 3) {
         w_Z(i) :=rx_path(i).Z(0)
     }
-    //Modes
-    switch(state) {
+
+    //Clock multiplexing does not work. Use valid to control output rate.
+    val validcount  = withClock(io.clock_symratex4)(RegInit(0.U(2.W)))
+    val validreg =  withClock(io.clock_symratex4)(RegInit(false.B))
+    //control the valid signaö for the interface
+    when ( (mode===bypass) ||  (mode===select_users) ||  (mode===select_antennas) || (mode===select_both)  ) {
+        // In these modes, the write rate is symrate
+        when (validcount===3.U) {
+            validcount:=0.U
+            validreg := true.B
+        } .otherwise {
+            validcount:= validcount+1.U(1.W)
+            validreg := false.B
+        }
+    } .elsewhen ( ( mode===stream_users) || (mode===stream_rx) ) {
+        // In these modes, the write rate is 4xsymrate
+        validreg :=true.B
+    } .otherwise {
+        //Unknown modes
+        validcount := 0.U
+        validreg := false.B
+    }
+    outfifo.io.enq.valid :=  validreg   
+
+
+    //Mode operation definitions
+    switch(mode) {
         is(bypass) {
             when ( outfifo.io.enq.ready ){
                 for (i <- 0 to 3) {
@@ -138,8 +168,6 @@ class f2_dsp_tapein5 (n: Int=16, antennas: Int=4, users: Int=4) extends Module {
                 }
                 w_index := withClock(io.clock_symrate)(RegNext(0.U))
             }
-            outfifo.io.enq_clock:=io.clock_symrate
-            outfifo.io.enq.valid:=withClock(io.clock_symrate)(RegNext(true.B))
         }
         is(select_users) {
             when ( outfifo.io.enq.ready ){
@@ -148,18 +176,13 @@ class f2_dsp_tapein5 (n: Int=16, antennas: Int=4, users: Int=4) extends Module {
                 }
                 w_index := withClock(io.clock_symrate)(RegNext(io.user_index))
             }
-            outfifo.io.enq_clock:=io.clock_symrate
-            outfifo.io.enq.valid:=withClock(io.clock_symrate)(RegNext(true.B))
         }
         is(select_antennas) {
             when ( outfifo.io.enq.ready ){
                 for (i <- 0 to 3) {
                     w_Z(i) :=selrx(i)
                 }
-                w_index := withClock(io.clock_symrate)(RegNext(io.antenna_index))
             }
-            outfifo.io.enq_clock:=io.clock_symrate
-            outfifo.io.enq.valid:=withClock(io.clock_symrate)(RegNext(true.B))
         }
         is(select_both) {
             when ( outfifo.io.enq.ready ){
@@ -169,8 +192,6 @@ class f2_dsp_tapein5 (n: Int=16, antennas: Int=4, users: Int=4) extends Module {
                 w_Z(3) := DspComplex.wire(0.S,0.S)
                 w_index := withClock(io.clock_symrate)(RegNext(0.U))
             }
-            outfifo.io.enq_clock:=io.clock_symrate
-            outfifo.io.enq.valid:=withClock(io.clock_symrate)(RegNext(true.B))
 
         }
         is(stream_users) {
@@ -178,8 +199,6 @@ class f2_dsp_tapein5 (n: Int=16, antennas: Int=4, users: Int=4) extends Module {
                 w_Z := indexeduserstream    
                 w_index := withClock(io.clock_symratex4)(RegNext(index))
             }
-            outfifo.io.enq_clock:=io.clock_symratex4
-            outfifo.io.enq.valid:=withClock(io.clock_symratex4)(RegNext(true.B))
 
         }
         is(stream_rx) {
@@ -187,8 +206,6 @@ class f2_dsp_tapein5 (n: Int=16, antennas: Int=4, users: Int=4) extends Module {
                 w_Z := indexedrxstream    
                 w_index := withClock(io.clock_symratex4)(RegNext(index))
             }
-            outfifo.io.enq_clock:=io.clock_symratex4
-            outfifo.io.enq.valid:=withClock(io.clock_symratex4)(RegNext(true.B))
         }
     }
     val w_concat_Z=  Wire(UInt((4*2*n).W))
