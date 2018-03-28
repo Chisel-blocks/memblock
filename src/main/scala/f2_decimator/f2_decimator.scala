@@ -145,4 +145,3 @@ object f2_decimator extends App {
   chisel3.Driver.execute(args, () => new f2_decimator() )
 }
 
-
