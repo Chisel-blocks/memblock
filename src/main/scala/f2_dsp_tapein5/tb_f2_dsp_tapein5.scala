@@ -22,6 +22,11 @@ object tb_f2_dsp_tapein5 {
                         ("g_scale1 ","1"),
                         ("g_scale2 ","1"),
                         ("g_scale3 ","1"),
+                        ("g_mode   ","4"),
+                        ("g_user_index","0"),
+                        ("g_antenna_index","0"),
+                        ("g_rx_output_mode","0"),
+                        ("g_input_mode","0"),
                         ("g_mode   ","4"))
 
         var externalpars=("//Things you want to control from the simulator cmdline must be parameters \nmodule {{oname}} #("
@@ -35,22 +40,58 @@ object tb_f2_dsp_tapein5 {
         val tb = new BufferedWriter(new FileWriter("./verilog/"+name+".v"))
         object tbvars {
           val oname=name
-          val dutmod = "f2_dsp_tapein4" 
+          val dutmod = "f2_dsp_tapein5" 
           val n = 16
           val resolution=32
           val ulimit=resolution-n-1
           val gainbits= 10
           val gainlimit=gainbits-1
-          val clk0="decimator_controls_cic3clockslow"
-          val clk1="decimator_controls_hb1clock_low"
-          val clk2="decimator_controls_hb2clock_low"
-          val clk3="decimator_controls_hb3clock_low"
-          val sig0="decimator_controls_cic3integscale"
-          val sig1="decimator_controls_hb1scale"
-          val sig2="decimator_controls_hb2scale"
-          val sig3="decimator_controls_hb3scale"
-          val sig4="decimator_controls_mode"
+          val clk0="decimator_controls_0_cic3clockslow"
+          val clk1="decimator_controls_0_hb1clock_low"
+          val clk2="decimator_controls_0_hb2clock_low"
+          val clk3="decimator_controls_0_hb3clock_low"
+          val clk4="clock_symrate"
+          val clk5="clock_symratex4"
+          val clk6="clock_outfifo_deq"
+          val clk7="clock_infifo_enq"
+          val sig0="decimator_controls_0_cic3integscale"
+          val sig1="decimator_controls_0_hb1scale"
+          val sig2="decimator_controls_0_hb2scale"
+          val sig3="decimator_controls_0_hb3scale"
+          val sig4="decimator_controls_0_mode"
           val sig4limit=2
+          val sig5="decimator_controls_1_cic3integscale"
+          val sig6="decimator_controls_1_hb1scale"
+          val sig7="decimator_controls_1_hb2scale"
+          val sig8="decimator_controls_1_hb3scale"
+          val sig9="decimator_controls_1_mode"
+          val sig10="decimator_controls_2_cic3integscale"
+          val sig11="decimator_controls_2_hb1scale"
+          val sig12="decimator_controls_2_hb2scale"
+          val sig13="decimator_controls_2_hb3scale"
+          val sig14="decimator_controls_2_mode"
+          val sig15="decimator_controls_3_cic3integscale"
+          val sig16="decimator_controls_3_hb1scale"
+          val sig17="decimator_controls_3_hb2scale"
+          val sig18="decimator_controls_3_hb3scale"
+          val sig19="decimator_controls_3_mode"
+          val sig20="user_index"
+          val sig21="antenna_index"
+          val indexlimit=1
+          val sig22="reset_index_count"
+          val sig23="reset_outfifo"
+          val sig24="reset_infifo"
+          val sig25="rx_output_mode"
+          val sig26="input_mode"
+          val sig27="reset_infifo"
+          val sig28="iptr_A_0_real"
+          val sig29="iptr_A_0_imag"
+          val sig30="iptr_A_1_real"
+          val sig31="iptr_A_1_imag"
+          val sig32="iptr_A_2_real"
+          val sig33="iptr_A_2_imag"
+          val sig34="iptr_A_3_real"
+          val sig35="iptr_A_3_imag"
         }
         val header="//This is a tesbench generated with scala generator\n"
         val extpars=extpargen()
@@ -72,26 +113,66 @@ object tb_f2_dsp_tapein5 {
                         |reg io_reset_clk;
                         |
                         |//Registers for inputs
-                        |reg signed [{{ulimit}}:0] io_iptr_A_real = 0;
-                        |reg signed [{{ulimit}}:0] io_iptr_A_imag = 0;
+                        |reg signed [{{ulimit}}:0] io_{{sig28}} =0;
+                        |reg signed [{{ulimit}}:0] io_{{sig28}} =0;
+                        |reg signed [{{ulimit}}:0] io_{{sig30}} =0;
+                        |reg signed [{{ulimit}}:0] io_{{sig31}} =0;
+                        |reg signed [{{ulimit}}:0] io_{{sig32}} =0;
+                        |reg signed [{{ulimit}}:0] io_{{sig33}} =0;
+                        |reg signed [{{ulimit}}:0] io_{{sig34}} =0;
+                        |reg signed [{{ulimit}}:0] io_{{sig35}} =0;
                         |reg signed [{{gainlimit}}:0] io_{{sig0}};
                         |reg signed [{{gainlimit}}:0] io_{{sig1}};
                         |reg signed [{{gainlimit}}:0] io_{{sig2}};
                         |reg signed [{{gainlimit}}:0] io_{{sig3}};
                         |reg signed [{{sig4limit}}:0] io_{{sig4}};
+                        |reg signed [{{gainlimit}}:0] io_{{sig5}};
+                        |reg signed [{{gainlimit}}:0] io_{{sig6}};
+                        |reg signed [{{gainlimit}}:0] io_{{sig7}};
+                        |reg signed [{{gainlimit}}:0] io_{{sig8}};
+                        |reg signed [{{sig4limit}}:0] io_{{sig9}};
+                        |reg signed [{{gainlimit}}:0] io_{{sig10}};
+                        |reg signed [{{gainlimit}}:0] io_{{sig11}};
+                        |reg signed [{{gainlimit}}:0] io_{{sig12}};
+                        |reg signed [{{gainlimit}}:0] io_{{sig13}};
+                        |reg signed [{{sig4limit}}:0] io_{{sig14}};
+                        |reg signed [{{gainlimit}}:0] io_{{sig15}};
+                        |reg signed [{{gainlimit}}:0] io_{{sig16}};
+                        |reg signed [{{gainlimit}}:0] io_{{sig17}};
+                        |reg signed [{{gainlimit}}:0] io_{{sig18}};
+                        |reg signed [{{sig4limit}}:0] io_{{sig19}};
+                        |reg unsigned [{{indexlimit}}:0] io_{{sig20}};
+                        |reg unsigned [{{indexlimit}}:0] io_{{sig21}};
                         |
-                        |//Resisters for outputs
+                        |//Additional resets
+                        |reg io_{{sig22}};
+                        |reg io_{{sig23}};
+                        |reg io_{{sig24}};
+                        |
+                        |//Modes
+                        |reg unsigned io_{{sig25}};
+                        |reg unsigned io_{{sig26}};
+                        |
+                        |//Wires for outputs
                         |wire signed [{{ulimit}}:0] io_Z_0_real;
                         |wire signed [{{ulimit}}:0] io_Z_0_imag;
                         |wire signed [{{ulimit}}:0] io_Z_1_real;
                         |wire signed [{{ulimit}}:0] io_Z_1_imag;
+                        |wire signed [{{ulimit}}:0] io_Z_2_real;
+                        |wire signed [{{ulimit}}:0] io_Z_2_imag;
+                        |wire signed [{{ulimit}}:0] io_Z_3_real;
+                        |wire signed [{{ulimit}}:0] io_Z_3_imag;
                         |
                         |//Wires for additional clocks
                         |wire io_{{clk0}};
                         |wire io_{{clk1}};
                         |wire io_{{clk2}};
                         |wire io_{{clk3}};
-
+                        |wire io_{{clk4}};
+                        |wire io_{{clk5}};
+                        |wire io_{{clk6}};
+                        |wire io_{{clk7}};
+                        |
                         |//File IO parameters
                         |integer StatusI, StatusO, infile, outfile;
                         |integer count0;
@@ -111,30 +192,6 @@ object tb_f2_dsp_tapein5 {
                         |
                         |//Clock definitions
                         |always #(c_Ts)clock = !clock ;
-                        |//always @(posedge clock) begin 
-                        |//    if (count0%c_ratio0/2 == 0) begin
-                        |//        io_{{clk0}} =! io_{{clk0}};
-                        |//    end 
-                        |//    count0++;
-                        |//end
-                        |//always @(posedge clock) begin 
-                        |//    if (count1%c_ratio1/2 == 0) begin
-                        |//        io_{{clk1}} =! io_{{clk1}};
-                        |//    end 
-                        |//    count1++;
-                        |//end
-                        |//always @(posedge clock) begin 
-                        |//    if (count2%c_ratio2/2 == 0) begin
-                        |//        io_{{clk2}} =! io_{{clk2}};
-                        |//    end 
-                        |//    count2++;
-                        |//end
-                        |//always @(posedge clock) begin 
-                        |//    if (count3%c_ratio3/2 == 0) begin
-                        |//        io_{{clk3}} =! io_{{clk3}};
-                        |//    end 
-                        |//    count3++;
-                        |//end
                         | 
                         |//always @(posedge io_{{clk0}}) begin 
                         |//always @(posedge io_{{clk1}}) begin 
@@ -169,11 +226,30 @@ object tb_f2_dsp_tapein5 {
                         |    .io_{{clk1}}(io_{{clk1}}), // @[:@3743.4]
                         |    .io_{{clk2}}(io_{{clk2}}), // @[:@3743.4]
                         |    .io_{{clk3}}(io_{{clk3}}), // @[:@3743.4]
+                        |    .io_{{clk4}}(io_{{clk0}}), // @[:@3743.4]
+                        |    .io_{{clk5}}(io_{{clk1}}), // @[:@3743.4]
+                        |    .io_{{clk6}}(io_{{clk2}}), // @[:@3743.4]
+                        |    .io_{{clk7}}(io_{{clk3}}), // @[:@3743.4]
                         |    .io_{{sig0}}(io_{{sig0}}), // @[:@3743.4]
                         |    .io_{{sig1}}(io_{{sig1}}), // @[:@3743.4]
                         |    .io_{{sig2}}(io_{{sig2}}), // @[:@3743.4]
                         |    .io_{{sig3}}(io_{{sig3}}), // @[:@3743.4]
                         |    .io_{{sig4}}(io_{{sig4}}), // @[:@3743.4]
+                        |    .io_{{sig5}}(io_{{sig8}}), // @[:@3743.4]
+                        |    .io_{{sig6}}(io_{{sig6}}), // @[:@3743.4]
+                        |    .io_{{sig7}}(io_{{sig7}}), // @[:@3743.4]
+                        |    .io_{{sig8}}(io_{{sig8}}), // @[:@3743.4]
+                        |    .io_{{sig9}}(io_{{sig9}}), // @[:@3743.4]
+                        |    .io_{{sig10}}(io_{{sig10}}), // @[:@3743.4]
+                        |    .io_{{sig11}}(io_{{sig11}}), // @[:@3743.4]
+                        |    .io_{{sig12}}(io_{{sig12}}), // @[:@3743.4]
+                        |    .io_{{sig13}}(io_{{sig13}}), // @[:@3743.4]
+                        |    .io_{{sig14}}(io_{{sig14}}), // @[:@3743.4]
+                        |    .io_{{sig15}}(io_{{sig18}}), // @[:@3743.4]
+                        |    .io_{{sig16}}(io_{{sig16}}), // @[:@3743.4]
+                        |    .io_{{sig17}}(io_{{sig17}}), // @[:@3743.4]
+                        |    .io_{{sig18}}(io_{{sig18}}), // @[:@3743.4]
+                        |    .io_{{sig19}}(io_{{sig19}}), // @[:@3743.4]
                         |    .io_iptr_A_real, // @[:@3743.4]
                         |    .io_iptr_A_imag, // @[:@3743.4]
                         |    .io_Z_0_real, // @[:@3743.4]
@@ -188,12 +264,37 @@ object tb_f2_dsp_tapein5 {
                         |    io_{{sig2}} = g_scale2;
                         |    io_{{sig3}} = g_scale3;
                         |    io_{{sig4}} = g_mode;
+                        |    io_{{sig5}} = g_scale0;
+                        |    io_{{sig6}} = g_scale1;
+                        |    io_{{sig7}} = g_scale2;
+                        |    io_{{sig8}} = g_scale3;
+                        |    io_{{sig9}} = g_mode;
+                        |    io_{{sig10}} = g_scale0;
+                        |    io_{{sig11}} = g_scale1;
+                        |    io_{{sig12}} = g_scale2;
+                        |    io_{{sig13}} = g_scale3;
+                        |    io_{{sig14}} = g_mode;
+                        |    io_{{sig15}} = g_scale0;
+                        |    io_{{sig16}} = g_scale1;
+                        |    io_{{sig17}} = g_scale2;
+                        |    io_{{sig18}} = g_scale3;
+                        |    io_{{sig19}} = g_mode;
+                        |    io_{{sig20}} = g_user_index;
+                        |    io_{{sig21}} = g_antenna_index;
                         |    io_Ndiv= c_ratio0;
+                        |    //Resets
                         |    reset=1;
                         |    io_reset_clk=1;
+                        |    io_{{sig21}} = 1;
+                        |    io_{{sig23}} = 1;
+                        |    io_{{sig24}} = 1;
                         |    #RESET_TIME
                         |    reset=0;
                         |    io_reset_clk=0;
+                        |    io_{{sig21}} = 0;
+                        |    io_{{sig23}} = 0;
+                        |    io_{{sig24}} = 0;
+                        |
                         |    infile = $fopen(g_infile,"r"); // For reading
                         |    while (!$feof(infile)) begin
                         |            @(posedge clock) 
