@@ -11,9 +11,9 @@ import freechips.rocketchip.util._
 import f2_decimator._
 import f2_rx_path_tapein5._
 
-class f2_dsp_io(n: Int=16, antennas: Int=4, users: Int=4) extends Bundle {
+class f2_dsp_io(inputn: Int=9, n: Int=16, antennas: Int=4, users: Int=4) extends Bundle {
     val decimator_controls = Vec(antennas,new f2_decimator_controls(gainbits=10))    
-    val iptr_A             = Input(Vec(antennas,DspComplex(SInt(n.W), SInt(n.W))))
+    val iptr_A             = Input(Vec(antennas,DspComplex(SInt(inputn.W), SInt(inputn.W))))
     val user_index         = Input(UInt(log2Ceil(users).W)) //W should be log2 of users
     val antenna_index      = Input(UInt(log2Ceil(antennas).W)) //W should be log2 of users
     val clock_symrate      = Input(Clock())
@@ -31,10 +31,10 @@ class f2_dsp_io(n: Int=16, antennas: Int=4, users: Int=4) extends Bundle {
     val iptr_fifo          =  Flipped(DecoupledIO(UInt((4*2*n+2).W)))
     // Index to be transmitted. Indicates user, or antenna
     //val index              =  Output(UInt(2.W))
-    override def cloneType = (new f2_dsp_io(n,antennas,users)).asInstanceOf[this.type]
+    override def cloneType = (new f2_dsp_io(inputn,n,antennas,users)).asInstanceOf[this.type]
 }
 
-class f2_dsp_tapein5 (n: Int=16, antennas: Int=4, users: Int=4, fifodepth: Int=128 ) extends Module {
+class f2_dsp_tapein5 (inputn: Int=9, n: Int=16, antennas: Int=4, users: Int=4, fifodepth: Int=128 ) extends Module {
     val io = IO( new f2_dsp_io(n=n,users=users)
     )
   
@@ -281,6 +281,6 @@ class f2_dsp_tapein5 (n: Int=16, antennas: Int=4, users: Int=4, fifodepth: Int=1
 
 //This gives you verilog
 object f2_dsp_tapein5 extends App {
-  chisel3.Driver.execute(args, () => new f2_dsp_tapein5(n=16, antennas=4, users=4, fifodepth=128 ))
+  chisel3.Driver.execute(args, () => new f2_dsp_tapein5(inputn=9, n=16, antennas=4, users=4, fifodepth=128 ))
 }
 

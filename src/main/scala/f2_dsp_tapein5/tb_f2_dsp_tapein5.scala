@@ -42,8 +42,8 @@ object tb_f2_dsp_tapein5 {
           val oname=name
           val dutmod = "f2_dsp_tapein5" 
           val n = 16
-          val resolution=32
-          val ulimit=resolution-n-1
+          val inlimit = 8
+          val ulimit= 15
           val gainbits= 10
           val gainlimit=gainbits-1
           val clk0="decimator_controls_0_cic3clockslow"
@@ -83,7 +83,7 @@ object tb_f2_dsp_tapein5 {
           val sig24="reset_infifo"
           val sig25="rx_output_mode"
           val sig26="input_mode"
-          val sig27="reset_infifo"
+          //27 missing
           val sig28="iptr_A_0_real"
           val sig29="iptr_A_0_imag"
           val sig30="iptr_A_1_real"
@@ -92,6 +92,13 @@ object tb_f2_dsp_tapein5 {
           val sig33="iptr_A_2_imag"
           val sig34="iptr_A_3_real"
           val sig35="iptr_A_3_imag"
+          val sig36="Z_ready"
+          val sig37="Z_valid"
+          val fifolimit=129
+          val sig38="Z_bits"
+          val sig39="iptr_fifo_ready"
+          val sig40="iptr_fifo_valid"
+          val sig41="iptr_fifo_bits"
         }
         val header="//This is a tesbench generated with scala generator\n"
         val extpars=extpargen()
@@ -113,14 +120,6 @@ object tb_f2_dsp_tapein5 {
                         |reg io_reset_clk;
                         |
                         |//Registers for inputs
-                        |reg signed [{{ulimit}}:0] io_{{sig28}} =0;
-                        |reg signed [{{ulimit}}:0] io_{{sig28}} =0;
-                        |reg signed [{{ulimit}}:0] io_{{sig30}} =0;
-                        |reg signed [{{ulimit}}:0] io_{{sig31}} =0;
-                        |reg signed [{{ulimit}}:0] io_{{sig32}} =0;
-                        |reg signed [{{ulimit}}:0] io_{{sig33}} =0;
-                        |reg signed [{{ulimit}}:0] io_{{sig34}} =0;
-                        |reg signed [{{ulimit}}:0] io_{{sig35}} =0;
                         |reg signed [{{gainlimit}}:0] io_{{sig0}};
                         |reg signed [{{gainlimit}}:0] io_{{sig1}};
                         |reg signed [{{gainlimit}}:0] io_{{sig2}};
@@ -143,15 +142,31 @@ object tb_f2_dsp_tapein5 {
                         |reg signed [{{sig4limit}}:0] io_{{sig19}};
                         |reg unsigned [{{indexlimit}}:0] io_{{sig20}};
                         |reg unsigned [{{indexlimit}}:0] io_{{sig21}};
-                        |
                         |//Additional resets
                         |reg io_{{sig22}};
                         |reg io_{{sig23}};
                         |reg io_{{sig24}};
-                        |
                         |//Modes
                         |reg unsigned io_{{sig25}};
                         |reg unsigned io_{{sig26}};
+                        |
+                        |//Inputs
+                        |reg signed [{{inlimit}}:0] io_{{sig28}} =0;
+                        |reg signed [{{inlimit}}:0] io_{{sig29}} =0;
+                        |reg signed [{{inlimit}}:0] io_{{sig30}} =0;
+                        |reg signed [{{inlimit}}:0] io_{{sig31}} =0;
+                        |reg signed [{{inlimit}}:0] io_{{sig32}} =0;
+                        |reg signed [{{inlimit}}:0] io_{{sig33}} =0;
+                        |reg signed [{{inlimit}}:0] io_{{sig34}} =0;
+                        |reg signed [{{inlimit}}:0] io_{{sig35}} =0;
+                        |
+                        |wire io_{{sig36}};
+                        |wire io_{{sig37}};
+                        |wire signed [{{fifolimit}}:0] io_{{sig38}};
+                        |reg io_{{sig39}};
+                        |wire io_{{sig40}};
+                        |reg [{{fifolimit}}:0] io_{{sig41}};
+                        |
                         |
                         |//Wires for outputs
                         |wire signed [{{ulimit}}:0] io_Z_0_real;
@@ -172,6 +187,12 @@ object tb_f2_dsp_tapein5 {
                         |wire io_{{clk5}};
                         |wire io_{{clk6}};
                         |wire io_{{clk7}};
+                        |
+                        |assing io_{{clk4}}=io_{{clk3}};
+                        |assing io_{{clk5}}=io_{{clk1}};
+                        |//Fifos, are read with the symclock
+                        |assing io_{{clk6}}=io_{{clk3}};
+                        |assing io_{{clk7}}=io_{{clk3}};
                         |
                         |//File IO parameters
                         |integer StatusI, StatusO, infile, outfile;
@@ -219,43 +240,58 @@ object tb_f2_dsp_tapein5 {
                         |);
                         |
                         |//DUT definition
-                        |{{dutmod}} DUT ( // @[:@3740.2]
-                        |    .clock(clock), // @[:@3741.4]
-                        |    .reset(reset), // @[:@3742.4]
-                        |    .io_{{clk0}}(io_{{clk0}}), // @[:@3743.4]
-                        |    .io_{{clk1}}(io_{{clk1}}), // @[:@3743.4]
-                        |    .io_{{clk2}}(io_{{clk2}}), // @[:@3743.4]
-                        |    .io_{{clk3}}(io_{{clk3}}), // @[:@3743.4]
-                        |    .io_{{clk4}}(io_{{clk0}}), // @[:@3743.4]
-                        |    .io_{{clk5}}(io_{{clk1}}), // @[:@3743.4]
-                        |    .io_{{clk6}}(io_{{clk2}}), // @[:@3743.4]
-                        |    .io_{{clk7}}(io_{{clk3}}), // @[:@3743.4]
-                        |    .io_{{sig0}}(io_{{sig0}}), // @[:@3743.4]
-                        |    .io_{{sig1}}(io_{{sig1}}), // @[:@3743.4]
-                        |    .io_{{sig2}}(io_{{sig2}}), // @[:@3743.4]
-                        |    .io_{{sig3}}(io_{{sig3}}), // @[:@3743.4]
-                        |    .io_{{sig4}}(io_{{sig4}}), // @[:@3743.4]
-                        |    .io_{{sig5}}(io_{{sig8}}), // @[:@3743.4]
-                        |    .io_{{sig6}}(io_{{sig6}}), // @[:@3743.4]
-                        |    .io_{{sig7}}(io_{{sig7}}), // @[:@3743.4]
-                        |    .io_{{sig8}}(io_{{sig8}}), // @[:@3743.4]
-                        |    .io_{{sig9}}(io_{{sig9}}), // @[:@3743.4]
-                        |    .io_{{sig10}}(io_{{sig10}}), // @[:@3743.4]
-                        |    .io_{{sig11}}(io_{{sig11}}), // @[:@3743.4]
-                        |    .io_{{sig12}}(io_{{sig12}}), // @[:@3743.4]
-                        |    .io_{{sig13}}(io_{{sig13}}), // @[:@3743.4]
-                        |    .io_{{sig14}}(io_{{sig14}}), // @[:@3743.4]
-                        |    .io_{{sig15}}(io_{{sig18}}), // @[:@3743.4]
-                        |    .io_{{sig16}}(io_{{sig16}}), // @[:@3743.4]
-                        |    .io_{{sig17}}(io_{{sig17}}), // @[:@3743.4]
-                        |    .io_{{sig18}}(io_{{sig18}}), // @[:@3743.4]
-                        |    .io_{{sig19}}(io_{{sig19}}), // @[:@3743.4]
-                        |    .io_iptr_A_real, // @[:@3743.4]
-                        |    .io_iptr_A_imag, // @[:@3743.4]
-                        |    .io_Z_0_real, // @[:@3743.4]
-                        |    .io_Z_0_imag, // @[:@3743.4]
-                        |    .io_Z_1_real, // @[:@3743.4]
-                        |    .io_Z_1_imag // @[:@3743.4]
+                        |{{dutmod}} DUT ( 
+                        |    .clock(clock),
+                        |    .reset(reset),
+                        |    .io_{{clk0}}(io_{{clk0}}),
+                        |    .io_{{clk1}}(io_{{clk1}}),
+                        |    .io_{{clk2}}(io_{{clk2}}),
+                        |    .io_{{clk3}}(io_{{clk3}}),
+                        |    .io_{{clk4}}(io_{{clk4}}),
+                        |    .io_{{clk5}}(io_{{clk5}}),
+                        |    .io_{{clk6}}(io_{{clk6}}),
+                        |    .io_{{clk7}}(io_{{clk7}}),
+                        |    .io_{{sig0}}(io_{{sig0}}),
+                        |    .io_{{sig1}}(io_{{sig1}}),
+                        |    .io_{{sig2}}(io_{{sig2}}),
+                        |    .io_{{sig3}}(io_{{sig3}}),
+                        |    .io_{{sig4}}(io_{{sig4}}),
+                        |    .io_{{sig5}}(io_{{sig8}}),
+                        |    .io_{{sig6}}(io_{{sig6}}),
+                        |    .io_{{sig7}}(io_{{sig7}}),
+                        |    .io_{{sig8}}(io_{{sig8}}),
+                        |    .io_{{sig9}}(io_{{sig9}}),
+                        |    .io_{{sig10}}(io_{{sig10}}),
+                        |    .io_{{sig11}}(io_{{sig11}}),
+                        |    .io_{{sig12}}(io_{{sig12}}),
+                        |    .io_{{sig13}}(io_{{sig13}}),
+                        |    .io_{{sig14}}(io_{{sig14}}),
+                        |    .io_{{sig15}}(io_{{sig18}}),
+                        |    .io_{{sig16}}(io_{{sig16}}),
+                        |    .io_{{sig17}}(io_{{sig17}}),
+                        |    .io_{{sig18}}(io_{{sig18}}),
+                        |    .io_{{sig19}}(io_{{sig19}}),
+                        |    .io_{{sig20}}(io_{{sig20}}),
+                        |    .io_{{sig21}}(io_{{sig21}}),
+                        |    .io_{{sig22}}(io_{{sig22}}),
+                        |    .io_{{sig23}}(io_{{sig23}}),
+                        |    .io_{{sig24}}(io_{{sig24}}),
+                        |    .io_{{sig25}}(io_{{sig25}}),
+                        |    .io_{{sig26}}(io_{{sig26}}),
+                        |    .io_{{sig28}}(io_{{sig28}}),
+                        |    .io_{{sig29}}(io_{{sig29}}),
+                        |    .io_{{sig30}}(io_{{sig30}}),
+                        |    .io_{{sig31}}(io_{{sig31}}),
+                        |    .io_{{sig32}}(io_{{sig32}}),
+                        |    .io_{{sig33}}(io_{{sig33}}),
+                        |    .io_{{sig34}}(io_{{sig34}}),
+                        |    .io_{{sig35}}(io_{{sig35}}),
+                        |    .io_{{sig36}}(io_{{sig36}}),
+                        |    .io_{{sig37}}(io_{{sig37}}),
+                        |    .io_{{sig38}}(io_{{sig38}}),
+                        |    .io_{{sig39}}(io_{{sig39}}),
+                        |    .io_{{sig40}}(io_{{sig40}}),
+                        |    .io_{{sig41}}(io_{{sig41}})
                         |   );
                         |
                         |initial #0 begin
@@ -298,9 +334,16 @@ object tb_f2_dsp_tapein5 {
                         |    infile = $fopen(g_infile,"r"); // For reading
                         |    while (!$feof(infile)) begin
                         |            @(posedge clock) 
-                        |             StatusI=$fscanf(infile, "%d\t%d\n", din1, din2);
-                        |             io_iptr_A_real <= din1;
-                        |             io_iptr_A_imag <= din2;
+                        |             StatusI=$fscanf(infile, "%d\t%d\n", din1, din2, din3, din4,\
+                        |                             din5, din6, din7, din8);
+                        |             io_{{sig28}} <= din1;
+                        |             io_{{sig28}} <= din2;
+                        |             io_{{sig28}} <= din3;
+                        |             io_{{sig28}} <= din4;
+                        |             io_{{sig28}} <= din5;
+                        |             io_{{sig28}} <= din6;
+                        |             io_{{sig28}} <= din7;
+                        |             io_{{sig28}} <= din8;
                         |    end
                         |    $fclose(infile);
                         |    $fclose(outfile);
