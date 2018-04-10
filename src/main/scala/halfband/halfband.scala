@@ -1,4 +1,4 @@
-//These are the ahlf-band filters for the F2 decimator
+//These are the half-band filters for the F2 decimator
 package halfband
 
 import chisel3.experimental._
@@ -28,15 +28,38 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
     withClock (io.clock_low){
         val slowregs  = RegInit(VecInit(Seq.fill(2)(DspComplex.wire(0.S(n.W), 0.S(n.W))))) //registers for sampling rate reduction
         (slowregs,inregs).zipped.map(_:=_)
-        
-        // Transposed direct form subfilters. Folding left for the synthesizer
+
         val sub1coeffs=coeffs.indices.filter(_ %2==0).map(coeffs(_)) //Even coeffs for Fir1
         println(sub1coeffs)
-        val subfil1= sub1coeffs.map(tap => slowregs(0)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
+        val tapped1=sub1coeffs.reverse.map(tap => slowregs(0)*tap)
+        val registerchain1=RegInit(VecInit(Seq.fill(tapped1.length+1)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W)))))
+        for ( i <- 0 to tapped1.length-1) {
+           println(i)
+            if (i==0) {
+                registerchain1(i+1):=tapped1(i)
+            } else {
+                registerchain1(i+1):=registerchain1(i)+tapped1(i)
+            }
+        }
+        val subfil1=registerchain1(tapped1.length)
+
+        // Transposed direct form subfilters. Folding left for the synthesizer
+        //val subfil1= sub1coeffs.reverse.map(tap => slowregs(0)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
         
         val sub2coeffs=coeffs.indices.filter(_ %2==1).map(coeffs(_)) //Odd coeffs for Fir 2
         println(sub2coeffs)
-        val subfil2= sub2coeffs.map(tap => slowregs(1)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
+        val tapped2=sub2coeffs.reverse.map(tap => slowregs(1)*tap)
+        val registerchain2=RegInit(VecInit(Seq.fill(tapped2.length+1)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W)))))
+        for ( i <- 0 to tapped2.length-1) {
+           println(i)
+            if (i==0) {
+                registerchain2(i+1):=tapped2(i)
+            } else {
+                registerchain2(i+1):=registerchain2(i)+tapped2(i)
+            }
+        }
+        val subfil2=registerchain2(tapped2.length)
+        //val subfil2= sub2coeffs.reverse.map(tap => slowregs(1)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
         
         
         io.Z.real := ((subfil1.real+subfil2.real)*io.scale)(resolution-1,resolution-n).asSInt
