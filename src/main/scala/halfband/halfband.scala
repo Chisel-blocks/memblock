@@ -34,7 +34,6 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
         val tapped1=sub1coeffs.reverse.map(tap => slowregs(0)*tap)
         val registerchain1=RegInit(VecInit(Seq.fill(tapped1.length+1)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W)))))
         for ( i <- 0 to tapped1.length-1) {
-           println(i)
             if (i==0) {
                 registerchain1(i+1):=tapped1(i)
             } else {
@@ -45,13 +44,13 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
 
         // Transposed direct form subfilters. Folding left for the synthesizer
         //val subfil1= sub1coeffs.reverse.map(tap => slowregs(0)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
+        //val subfil1= sub1coeffs.map(tap => slowregs(0)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
         
         val sub2coeffs=coeffs.indices.filter(_ %2==1).map(coeffs(_)) //Odd coeffs for Fir 2
         println(sub2coeffs)
         val tapped2=sub2coeffs.reverse.map(tap => slowregs(1)*tap)
         val registerchain2=RegInit(VecInit(Seq.fill(tapped2.length+1)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W)))))
         for ( i <- 0 to tapped2.length-1) {
-           println(i)
             if (i==0) {
                 registerchain2(i+1):=tapped2(i)
             } else {
@@ -60,10 +59,15 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
         }
         val subfil2=registerchain2(tapped2.length)
         //val subfil2= sub2coeffs.reverse.map(tap => slowregs(1)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
+        //val subfil2= sub2coeffs.map(tap => slowregs(1)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
         
-        
-        io.Z.real := ((subfil1.real+subfil2.real)*io.scale)(resolution-1,resolution-n).asSInt
-        io.Z.imag := ((subfil1.imag+subfil2.imag)*io.scale)(resolution-1,resolution-n).asSInt
+        val outreg=RegInit(DspComplex.wire(0.S(n.W), 0.S(n.W)))
+
+        outreg.real := ((subfil1.real+subfil2.real)*io.scale)(resolution-1,resolution-n).asSInt
+        //io.Z.real := ((subfil1.real+subfil2.real)*io.scale)(resolution-1,resolution-n).asSInt
+        outreg.imag := ((subfil1.imag+subfil2.imag)*io.scale)(resolution-1,resolution-n).asSInt
+        //io.Z.imag := ((subfil1.imag+subfil2.imag)*io.scale)(resolution-1,resolution-n).asSInt
+        io.Z:= outreg
     }
 }
 

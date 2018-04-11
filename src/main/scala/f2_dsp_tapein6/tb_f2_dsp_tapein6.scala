@@ -22,7 +22,6 @@ object tb_f2_dsp_tapein6 {
                         ("g_scale1 ","1"),
                         ("g_scale2 ","1"),
                         ("g_scale3 ","1"),
-                        ("g_mode   ","4"),
                         ("g_user_index","0"),
                         ("g_antenna_index","0"),
                         ("g_rx_output_mode","0"),
@@ -50,10 +49,22 @@ object tb_f2_dsp_tapein6 {
           val clk1="decimator_controls_0_hb1clock_low"
           val clk2="decimator_controls_0_hb2clock_low"
           val clk3="decimator_controls_0_hb3clock_low"
-          val clk4="clock_symrate"
-          val clk5="clock_symratex4"
-          val clk6="clock_outfifo_deq"
-          val clk7="clock_infifo_enq"
+          val clk4="decimator_controls_1_cic3clockslow"
+          val clk5="decimator_controls_1_hb1clock_low"
+          val clk6="decimator_controls_1_hb2clock_low"
+          val clk7="decimator_controls_1_hb3clock_low"
+          val clk8="decimator_controls_2_cic3clockslow"
+          val clk9="decimator_controls_2_hb1clock_low"
+          val clk10="decimator_controls_2_hb2clock_low"
+          val clk11="decimator_controls_2_hb3clock_low"
+          val clk12="decimator_controls_3_cic3clockslow"
+          val clk13="decimator_controls_3_hb1clock_low"
+          val clk14="decimator_controls_3_hb2clock_low"
+          val clk15="decimator_controls_3_hb3clock_low"
+          val clk16="clock_symrate"
+          val clk17="clock_symratex4"
+          val clk18="clock_outfifo_deq"
+          val clk19="clock_infifo_enq"
           val sig0="decimator_controls_0_cic3integscale"
           val sig1="decimator_controls_0_hb1scale"
           val sig2="decimator_controls_0_hb2scale"
@@ -81,7 +92,9 @@ object tb_f2_dsp_tapein6 {
           val sig22="reset_index_count"
           val sig23="reset_outfifo"
           val sig24="reset_infifo"
+          val rx_omodelimit=2
           val sig25="rx_output_mode"
+          val inputmodelimit=2
           val sig26="input_mode"
           //27 missing
           val sig28="iptr_A_0_real"
@@ -109,7 +122,7 @@ object tb_f2_dsp_tapein6 {
                         |parameter integer c_ratio1=g_Rs_high/(4*g_Rs_low);
                         |parameter integer c_ratio2=g_Rs_high/(2*g_Rs_low);
                         |parameter integer c_ratio3=g_Rs_high/(g_Rs_low);
-                        |parameter RESET_TIME = 5*c_Ts;
+                        |parameter RESET_TIME = 16*c_Ts;
                         |
                         |//These registers always needed
                         |reg clock;
@@ -140,32 +153,32 @@ object tb_f2_dsp_tapein6 {
                         |reg signed [{{gainlimit}}:0] io_{{sig17}};
                         |reg signed [{{gainlimit}}:0] io_{{sig18}};
                         |reg signed [{{sig4limit}}:0] io_{{sig19}};
-                        |reg unsigned [{{indexlimit}}:0] io_{{sig20}};
-                        |reg unsigned [{{indexlimit}}:0] io_{{sig21}};
+                        |reg [{{indexlimit}}:0] io_{{sig20}};
+                        |reg [{{indexlimit}}:0] io_{{sig21}};
                         |//Additional resets
                         |reg io_{{sig22}};
                         |reg io_{{sig23}};
                         |reg io_{{sig24}};
                         |//Modes
-                        |reg unsigned io_{{sig25}};
-                        |reg unsigned io_{{sig26}};
+                        |reg [{{rx_omodelimit}}:0] io_{{sig25}};
+                        |reg [{{inputmodelimit}}:0] io_{{sig26}};
                         |
                         |//Inputs
-                        |reg signed [{{inlimit}}:0] io_{{sig28}} =0;
-                        |reg signed [{{inlimit}}:0] io_{{sig29}} =0;
-                        |reg signed [{{inlimit}}:0] io_{{sig30}} =0;
-                        |reg signed [{{inlimit}}:0] io_{{sig31}} =0;
-                        |reg signed [{{inlimit}}:0] io_{{sig32}} =0;
-                        |reg signed [{{inlimit}}:0] io_{{sig33}} =0;
-                        |reg signed [{{inlimit}}:0] io_{{sig34}} =0;
-                        |reg signed [{{inlimit}}:0] io_{{sig35}} =0;
+                        |reg signed [{{inlimit}}:0] io_{{sig28}}=0;
+                        |reg signed [{{inlimit}}:0] io_{{sig29}}=0;
+                        |reg signed [{{inlimit}}:0] io_{{sig30}}=0;
+                        |reg signed [{{inlimit}}:0] io_{{sig31}}=0;
+                        |reg signed [{{inlimit}}:0] io_{{sig32}}=0;
+                        |reg signed [{{inlimit}}:0] io_{{sig33}}=0;
+                        |reg signed [{{inlimit}}:0] io_{{sig34}}=0;
+                        |reg signed [{{inlimit}}:0] io_{{sig35}}=0;
                         |
-                        |wire io_{{sig36}};
+                        |reg  io_{{sig36}};
                         |wire io_{{sig37}};
                         |wire signed [{{fifolimit}}:0] io_{{sig38}};
                         |reg io_{{sig39}};
                         |wire io_{{sig40}};
-                        |reg [{{fifolimit}}:0] io_{{sig41}};
+                        |wire [{{fifolimit}}:0] io_{{sig41}};
                         |
                         |
                         |//Wires for outputs
@@ -187,12 +200,29 @@ object tb_f2_dsp_tapein6 {
                         |wire io_{{clk5}};
                         |wire io_{{clk6}};
                         |wire io_{{clk7}};
+                        |wire io_{{clk8}};
+                        |wire io_{{clk9}};
+                        |wire io_{{clk10}};
+                        |wire io_{{clk11}};
+                        |wire io_{{clk12}};
+                        |wire io_{{clk13}};
+                        |wire io_{{clk14}};
+                        |wire io_{{clk15}};
+                        |wire io_{{clk16}};
+                        |wire io_{{clk17}};
+                        |wire io_{{clk18}};
+                        |wire io_{{clk19}};
                         |
-                        |assing io_{{clk4}}=io_{{clk3}};
-                        |assing io_{{clk5}}=io_{{clk1}};
-                        |//Fifos, are read with the symclock
-                        |assing io_{{clk6}}=io_{{clk3}};
-                        |assing io_{{clk7}}=io_{{clk3}};
+                        |
+                        |//Output assignment
+                        |assign io_Z_0_real = io_{{sig38}}[15:0];
+                        |assign io_Z_0_imag = io_{{sig38}}[31:16];
+                        |assign io_Z_1_real = io_{{sig38}}[47:32];
+                        |assign io_Z_1_imag = io_{{sig38}}[63:48];
+                        |assign io_Z_2_real = io_{{sig38}}[79:64];
+                        |assign io_Z_2_imag = io_{{sig38}}[95:80];
+                        |assign io_Z_3_real = io_{{sig38}}[111:96];
+                        |assign io_Z_3_imag = io_{{sig38}}[127:112];
                         |
                         |//File IO parameters
                         |integer StatusI, StatusO, infile, outfile;
@@ -200,7 +230,7 @@ object tb_f2_dsp_tapein6 {
                         |integer count1;
                         |integer count2;
                         |integer count3;
-                        |integer din1,din2;
+                        |integer din1,din2,din3,din4,din5,din6,din7,din8;
                         |
                         |//Initializations
                         |initial count0 = 0;
@@ -217,13 +247,16 @@ object tb_f2_dsp_tapein6 {
                         |//always @(posedge io_{{clk0}}) begin 
                         |//always @(posedge io_{{clk1}}) begin 
                         |//always @(posedge io_{{clk2}}) begin 
-                        |always @(posedge io_{{clk3}}) begin 
+                        |//Read this with Ouput fifo enquque clk
+                        |always @(posedge io_{{clk18}}) begin 
                         |    //Print only valid values 
-                        |    if (~($isunknown( io_Z_0_real)) &&   ~($isunknown( io_Z_0_imag)) && ~($isunknown( io_Z_1_real)) && ~($isunknown( io_Z_1_imag))) begin
-                        |        $fwrite(outfile, "%d\t%d\t%d\t%d\n", io_Z_0_real, io_Z_0_imag, io_Z_1_real, io_Z_1_imag);
+                        |    if (~$isunknown(io_{{sig38}})) begin
+                        |        $fwrite(outfile, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", io_Z_0_real, io_Z_0_imag, 
+                        |                         io_Z_1_real, io_Z_1_imag, io_Z_2_real, 
+                        |                         io_Z_2_imag, io_Z_3_real, io_Z_3_imag);
                         |    end
                         |    else begin
-                        |        $fwrite(outfile, "%d\t%d\t%d\t%d\n",0,0,0,0);
+                        |        $fwrite(outfile, "%d\t%d\t%d\t%d\t\%d\t%d\t%d\t%d\n",0,0,0,0,0,0,0,0);
                         |    end 
                         |end
                         |
@@ -239,6 +272,26 @@ object tb_f2_dsp_tapein6 {
                         |  .io_clkp8n(io_{{clk3}})// @[:@6.4]
                         |);
                         |
+                        |assign io_{{clk4}}=io_{{clk0}};
+                        |assign io_{{clk5}}=io_{{clk1}};
+                        |assign io_{{clk6}}=io_{{clk2}};
+                        |assign io_{{clk7}}=io_{{clk3}};
+                        |assign io_{{clk8}}=io_{{clk0}};
+                        |assign io_{{clk9}}=io_{{clk1}};
+                        |assign io_{{clk10}}=io_{{clk2}};
+                        |assign io_{{clk11}}=io_{{clk3}};
+                        |assign io_{{clk12}}=io_{{clk0}};
+                        |assign io_{{clk13}}=io_{{clk1}};
+                        |assign io_{{clk14}}=io_{{clk2}};
+                        |assign io_{{clk15}}=io_{{clk3}};
+                        |
+                        |//symclks
+                        |assign io_{{clk16}}=io_{{clk3}};
+                        |assign io_{{clk17}}=io_{{clk1}};
+                        |//Fifos, are read with the symclock
+                        |assign io_{{clk18}}=io_{{clk3}};
+                        |assign io_{{clk19}}=io_{{clk3}};
+                        |
                         |//DUT definition
                         |{{dutmod}} DUT ( 
                         |    .clock(clock),
@@ -251,6 +304,18 @@ object tb_f2_dsp_tapein6 {
                         |    .io_{{clk5}}(io_{{clk5}}),
                         |    .io_{{clk6}}(io_{{clk6}}),
                         |    .io_{{clk7}}(io_{{clk7}}),
+                        |    .io_{{clk8}}(io_{{clk8}}),
+                        |    .io_{{clk9}}(io_{{clk9}}),
+                        |    .io_{{clk10}}(io_{{clk10}}),
+                        |    .io_{{clk11}}(io_{{clk11}}),
+                        |    .io_{{clk12}}(io_{{clk12}}),
+                        |    .io_{{clk13}}(io_{{clk13}}),
+                        |    .io_{{clk14}}(io_{{clk14}}),
+                        |    .io_{{clk15}}(io_{{clk15}}),
+                        |    .io_{{clk16}}(io_{{clk16}}),
+                        |    .io_{{clk17}}(io_{{clk17}}),
+                        |    .io_{{clk18}}(io_{{clk18}}),
+                        |    .io_{{clk19}}(io_{{clk19}}),
                         |    .io_{{sig0}}(io_{{sig0}}),
                         |    .io_{{sig1}}(io_{{sig1}}),
                         |    .io_{{sig2}}(io_{{sig2}}),
@@ -317,33 +382,36 @@ object tb_f2_dsp_tapein6 {
                         |    io_{{sig19}} = g_mode;
                         |    io_{{sig20}} = g_user_index;
                         |    io_{{sig21}} = g_antenna_index;
+                        |    io_{{sig25}} = g_rx_output_mode;
+                        |    io_{{sig36}} = 1;
                         |    io_Ndiv= c_ratio0;
                         |    //Resets
                         |    reset=1;
                         |    io_reset_clk=1;
-                        |    io_{{sig21}} = 1;
+                        |    io_{{sig22}} = 1;
                         |    io_{{sig23}} = 1;
                         |    io_{{sig24}} = 1;
                         |    #RESET_TIME
                         |    reset=0;
                         |    io_reset_clk=0;
-                        |    io_{{sig21}} = 0;
+                        |    #(16*RESET_TIME)
+                        |    io_{{sig22}} = 0;
                         |    io_{{sig23}} = 0;
                         |    io_{{sig24}} = 0;
                         |
                         |    infile = $fopen(g_infile,"r"); // For reading
                         |    while (!$feof(infile)) begin
                         |            @(posedge clock) 
-                        |             StatusI=$fscanf(infile, "%d\t%d\n", din1, din2, din3, din4,\
-                        |                             din5, din6, din7, din8);
+                        |             StatusI=$fscanf(infile, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+                        |                             din1, din2, din3, din4,din5, din6, din7, din8);
                         |             io_{{sig28}} <= din1;
-                        |             io_{{sig28}} <= din2;
-                        |             io_{{sig28}} <= din3;
-                        |             io_{{sig28}} <= din4;
-                        |             io_{{sig28}} <= din5;
-                        |             io_{{sig28}} <= din6;
-                        |             io_{{sig28}} <= din7;
-                        |             io_{{sig28}} <= din8;
+                        |             io_{{sig29}} <= din2;
+                        |             io_{{sig30}} <= din3;
+                        |             io_{{sig31}} <= din4;
+                        |             io_{{sig32}} <= din5;
+                        |             io_{{sig33}} <= din6;
+                        |             io_{{sig34}} <= din7;
+                        |             io_{{sig35}} <= din8;
                         |    end
                         |    $fclose(infile);
                         |    $fclose(outfile);
