@@ -10,11 +10,11 @@ import dsptools.numbers._
 import f2_decimator._
 
 
-class f2_rx_path_io(n: Int=16, users: Int=4 ) extends Bundle {
+class f2_rx_path_io(val n: Int=16, val users: Int=4 ) extends Bundle {
     val decimator_controls = new f2_decimator_controls(gainbits=10)
     val iptr_A      = Input(DspComplex(SInt(n.W), SInt(n.W)))
     val Z           = Output(Vec(users,DspComplex(SInt(n.W), SInt(n.W))))
-    override def cloneType = (new f2_rx_path_io(n,users)).asInstanceOf[this.type]
+    //override def cloneType = (new f2_rx_path_io(n,users)).asInstanceOf[this.type]
 }
 
 class f2_rx_path_tapein6 (n: Int=16, users: Int=4) extends Module {
