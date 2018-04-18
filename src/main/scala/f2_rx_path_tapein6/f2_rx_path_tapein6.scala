@@ -11,6 +11,7 @@ import f2_decimator._
 
 
 class f2_rx_path_io(val n: Int=16, val users: Int=4 ) extends Bundle {
+    val decimator_clocks = new f2_decimator_clocks()
     val decimator_controls = new f2_decimator_controls(gainbits=10)
     val iptr_A      = Input(DspComplex(SInt(n.W), SInt(n.W)))
     val Z           = Output(Vec(users,DspComplex(SInt(n.W), SInt(n.W))))
@@ -23,12 +24,9 @@ class f2_rx_path_tapein6 (n: Int=16, users: Int=4) extends Module {
 
   val decimator  = Module ( new  f2_decimator (n=16, resolution=32, coeffres=16, gainbits=10))
   io.decimator_controls<>decimator.io.controls
+  io.decimator_clocks<>decimator.io.clocks
   decimator.io.iptr_A:=io.iptr_A
-  
-  for ( i <- 0 to users-1 ) { 
-      //How to use Valid?
-      io.Z(i):=decimator.io.Z
-  }
+  io.Z.map(_:=decimator.io.Z)
 }
 
 //This gives you verilog

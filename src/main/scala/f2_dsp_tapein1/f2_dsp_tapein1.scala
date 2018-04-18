@@ -32,6 +32,7 @@ class sync_config_io[T <: Data](params: SyncParams[T]) extends Bundle {
 //
 //class f2_dsp_io[T <: Data](n: Int=16, users: Int=2, params: SyncParams[T] ) extends SyncIO(params) {
 class f2_dsp_io[T <: Data](n: Int=16, users: Int=2, params: SyncParams[T] ) extends Bundle {
+    val decimator_clocks = new f2_decimator_clocks
     val decimator_controls = new f2_decimator_controls(gainbits=10)
     val sync_config        = new sync_config_io(params=params)
     val mode               = Input(UInt(2.W))
@@ -112,9 +113,10 @@ class f2_dsp_tapein1 (n: Int=16, users: Int=2, resolution: Int=32) extends Modul
 
     val decimator  = Module ( new  f2_decimator (n=16, resolution=32, coeffres=16, gainbits=10))
     io.decimator_controls<>decimator.io.controls
+    io.decimator_clocks<>decimator.io.clocks
     decimator.io.iptr_A:=io.iptr_A
 
-    val ofdm_sync = withClock(decimator.io.controls.hb3clock_low)( Module( new Sync(params=stfParams) ))
+    val ofdm_sync = withClock(decimator.io.clocks.hb3clock_low)( Module( new Sync(params=stfParams) ))
     ofdm_sync.io.in.bits:=decimator.io.Z
 
     for ( i <- 0 to users-1 ) { 

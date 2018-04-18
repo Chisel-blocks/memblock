@@ -33,7 +33,8 @@ class iofifosigs(n: Int) extends Bundle {
 }
 
 class f2_dsp_io(val inputn: Int=9, val n: Int=16, val antennas: Int=4, val users: Int=4) extends Bundle {
-    val decimator_controls = Vec(antennas,new f2_decimator_controls(gainbits=10))    
+    val decimator_clocks   =  new f2_decimator_clocks    
+    val decimator_controls = Vec(4,new f2_decimator_controls(gainbits=10))    
     //val iptr_A             = Vec(antennas,Flipped(DecoupledIO(DspComplex.wire(SInt(inputn.W), SInt(inputn.W)))))
     val iptr_A             = Input(Vec(antennas,DspComplex(SInt(inputn.W), SInt(inputn.W))))
     val adc_clocks         = Input(Vec(antennas,Clock()))
@@ -93,7 +94,8 @@ class f2_dsp_tapein6 (inputn: Int=9, n: Int=16, antennas: Int=4, users: Int=4, f
     }
 
     //RX input assignments        
-    (io.decimator_controls,rx_path).zipped.map(_<>_.decimator_controls)
+    (rx_path,io.decimator_controls).zipped.map(_.decimator_controls:=_)
+    rx_path.map(_.decimator_clocks:=io.decimator_clocks) 
     (rx_path,w_inselect).zipped.map(_.iptr_A:=_)
 
     //---Input fifo from serdes

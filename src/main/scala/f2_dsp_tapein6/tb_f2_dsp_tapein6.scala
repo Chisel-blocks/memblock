@@ -47,7 +47,7 @@ object tb_f2_dsp_tapein6 {
           val inlimit = 8
           val ulimit= 15
           val gainbits= 10
-          val decimator_modebits= 2
+          val decimator_modebits= 3
           val rx_output_modebits= 3
           val input_modebits= 3
           val adc_fifo_modebits= 1
@@ -141,35 +141,25 @@ object tb_f2_dsp_tapein6 {
           //(type,name,upperlimit,lowerlimit, assign,init)    
           val ioseq=Seq(("clock","clock"),
                         ("reset","reset"),
-                        ("dclk","clkpn"),
-                        ("dclk","clkp2n"),
-                        ("dclk","clkp4n"),
-                        ("dclk","clkp8n"),
-                        ("dclk","decimator_controls_0_cic3clockslow"),
-                        ("dclk","decimator_controls_0_cic3clockslow"),
-                        ("dclk","decimator_controls_0_hb1clock_low"),
-                        ("dclk","decimator_controls_0_hb2clock_low"),
-                        ("dclk","decimator_controls_0_hb3clock_low"),
-                        ("dclk","decimator_controls_1_cic3clockslow"),
-                        ("dclk","decimator_controls_1_hb1clock_low"),
-                        ("dclk","decimator_controls_1_hb2clock_low"),
-                        ("dclk","decimator_controls_1_hb3clock_low"),
-                        ("dclk","decimator_controls_2_cic3clockslow"),
-                        ("dclk","decimator_controls_2_hb1clock_low"),
-                        ("dclk","decimator_controls_2_hb2clock_low"),
-                        ("dclk","decimator_controls_2_hb3clock_low"),
-                        ("dclk","decimator_controls_3_cic3clockslow"),
-                        ("dclk","decimator_controls_3_hb1clock_low"),
-                        ("dclk","decimator_controls_3_hb2clock_low"),
-                        ("dclk","decimator_controls_3_hb3clock_low"),
-                        ("dclk","clock_symrate"),
-                        ("dclk","clock_symratex4"),
-                        ("dclk","clock_outfifo_deq"),
-                        ("dclk","clock_infifo_enq"),
-                        ("dclk","adc_clocks_0"),
-                        ("dclk","adc_clocks_1"),
-                        ("dclk","adc_clocks_2"),
-                        ("dclk","adc_clocks_3"),
+                        ("wire","clkpn"),
+                        ("wire","clkp2n"),
+                        ("wire","clkp4n"),
+                        ("wire","clkp8n"),
+                        ("dclk","decimator_clocks_cic3clockslow","clkpn"),
+                        ("dclk","decimator_clocks_hb1clock_low","clkp2n"),
+                        ("dclk","decimator_clocks_hb2clock_low","clkp4n"),
+                        ("dclk","decimator_clocks_hb3clock_low","clkp8n"),
+                        ("dclk","clock_symrate","clkp8n"),
+                        ("dclk","clock_symratex4","clkp2n"),
+                        ("dclk","clock_outfifo_deq","clock_symrate"),
+                        ("dclk","clock_infifo_enq","clock_symrate"),
+                        ("dclk","adc_clocks_0","clock"),
+                        ("dclk","adc_clocks_1","clock"),
+                        ("dclk","adc_clocks_2","clock"),
+                        ("dclk","adc_clocks_3","clock"),
+                        ("reg","Ndiv",7,0),
+                        ("reg","reset_clk"),
+                        ("in","decimator_controls_0_cic3integscale",gainbits-1,0),
                         ("in","decimator_controls_0_hb1scale",gainbits-1,0),
                         ("in","decimator_controls_0_hb2scale",gainbits-1,0),
                         ("in","decimator_controls_0_hb3scale",gainbits-1,0),
@@ -193,8 +183,9 @@ object tb_f2_dsp_tapein6 {
                         ("in","antenna_index",indexbits-1,0),
                         ("in","reset_index_count"),
                         ("in","reset_outfifo"),
+                        ("in","reset_adcfifo"),
                         ("in","reset_infifo"),
-                        ("in","rx_output_mode",rx_output_modebits,0),
+                        ("in","rx_output_mode",rx_output_modebits-1,0),
                         ("in","input_mode",input_modebits-1,0),
                         ("in","adc_fifo_mode",adc_fifo_modebits-1,0),
                         ("in","iptr_A_0_real",inputn-1,0),
@@ -205,17 +196,18 @@ object tb_f2_dsp_tapein6 {
                         ("in","iptr_A_2_imag",inputn-1,0),
                         ("in","iptr_A_3_real",inputn-1,0),
                         ("in","iptr_A_3_imag",inputn-1,0),
-                        ("in","Z_ready"),
-                        ("out","Z_valid"),
-                        ("out","ofifo_bits_data_0_real",n-1,0),
-                        ("out","ofifo_bits_data_0_imag",n-1,0),
-                        ("out","ofifo_bits_data_1_real",n-1,0),
-                        ("out","ofifo_bits_data_1_imag",n-1,0),
-                        ("out","ofifo_bits_data_2_real",n-1,0),
-                        ("out","ofifo_bits_data_2_imag",n-1,0),
-                        ("out","ofifo_bits_data_3_real",n-1,0),
-                        ("out","ofifo_bits_data_3_imag",n-1,0),
-                        ("in","iptr_fifo_ready"),
+                        ("outs","ofifo_bits_data_0_real",n-1,0),
+                        ("outs","ofifo_bits_data_0_imag",n-1,0),
+                        ("outs","ofifo_bits_data_1_real",n-1,0),
+                        ("outs","ofifo_bits_data_1_imag",n-1,0),
+                        ("outs","ofifo_bits_data_2_real",n-1,0),
+                        ("outs","ofifo_bits_data_2_imag",n-1,0),
+                        ("outs","ofifo_bits_data_3_real",n-1,0),
+                        ("outs","ofifo_bits_data_3_imag",n-1,0),
+                        ("out","ofifo_bits_index",1,0),
+                        ("in","ofifo_ready"),
+                        ("out","ofifo_valid"),
+                        ("out","iptr_fifo_ready"),
                         ("in","iptr_fifo_valid"),
                         ("in","iptr_fifo_bits_data_0_real",n-1,0),
                         ("in","iptr_fifo_bits_data_0_imag",n-1,0),
@@ -225,23 +217,19 @@ object tb_f2_dsp_tapein6 {
                         ("in","iptr_fifo_bits_data_2_imag",n-1,0),
                         ("in","iptr_fifo_bits_data_3_real",n-1,0),
                         ("in","iptr_fifo_bits_data_3_imag",n-1,0),
-                        ("in","reset_adcfifo"),
-                        ("out","io_Z_0_real",n-1,0), 
-                        ("out","io_Z_0_imag",n-1,0),
-                        ("out","io_Z_1_real",n-1,0),
-                        ("out","io_Z_1_imag",n-1,0),
-                        ("out","io_Z_2_real",n-1,0),
-                        ("out","io_Z_2_imag",n-1,0),
-                        ("out","io_Z_3_real",n-1,0),
-                        ("out","io_Z_3_imag",n-1,0)
+                        ("in","iptr_fifo_bits_index",1,0)
                         )
         }
         val header="//This is a tesbench generated with scala generator\n"
         val extpars=extpargen()
-        var dutdef="""//DUT definition\n    %s DUT (""".format(tbvars.dutmod)+
+        var dutdef="""//DUT definition%n    %s DUT (""".format(tbvars.dutmod)+
                      tbvars.ioseq.map{ 
+                         case ("reg",name) => ""
+                         case ("reg",name,ul,dl)  => ""
+                         case ("wire",name) => ""
                          case ("reset",name) => ".%s(%s),\n    ".format(name,name)
                          case ("clock",name) => ".%s(%s),\n    ".format(name,name)
+                         case ("dclk",name,assign) => ".io_%s(io_%s),\n    ".format(name,name)
                          case (dir,name) => ".io_%s(io_%s),\n    ".format(name,name)
                          case (dir,name,ul,dl) => ".io_%s(io_%s),\n    ".format(name,name)
                          case (dir,name,ul,dl,init) => ".io_%s(io_%s),\n    ".format(name,name)
@@ -249,32 +237,39 @@ object tb_f2_dsp_tapein6 {
                      }.mkString
         dutdef=dutdef.patch(dutdef.lastIndexOf(','),"",1)+");"
 
-        val regdef="""//Registers for inputs\n"""+
+        val regdef="""//Registers for inputs %n""".format() +
                      tbvars.ioseq.map{ 
-                         case ("reset",name,ul,dl,init,assign) => "reg %s;\n".format(name)
-                         case ("clock",name,ul,dl,init,assign) => "reg %s;\n".format(name)
-                         case ("in",name) => "reg io_%s;\n".format(name)
-                         case ("in",name,ul,dl) => "reg [%s:%s] io_%s;\n".format(ul,dl,name)
-                         case ("in",name,ul,dl,init) => "reg [%s:%s] io_%s;\n".format(ul,dl,name)
-                         case ("in",name,ul,dl,init,assign) => "reg [%s:%s] io_%s;\n".format(ul,dl,name)
+                         case ("reset",name) => "reg %s;\n".format(name)
+                         case ("clock",name) => "reg %s;\n".format(name)
+                         case ("in"|"reg",name) => "reg io_%s;\n".format(name)
+                         case ("in"|"reg",name,ul,dl) => "reg [%s:%s] io_%s;\n".format(ul,dl,name)
+                         case ("in"|"reg",name,ul,dl,init) => "reg [%s:%s] io_%s;\n".format(ul,dl,name)
+                         case ("in"|"reg",name,ul,dl,init,assign) => "reg [%s:%s] io_%s;\n".format(ul,dl,name)
+                         case ("ins"|"regs",name,ul,dl) => "reg signed [%s:%s] io_%s;\n".format(ul,dl,name)
+                         case ("ins"|"regs",name,ul,dl,init) => "reg signed [%s:%s] io_%s;\n".format(ul,dl,name)
                          case _ => ""
                      }.mkString
 
-        val wiredef="""//Wires for outputs\n"""+
+        val wiredef="""//Wires for outputs %n""".format() +
                      tbvars.ioseq.map{ 
                          case ("dclk",name) => "wire io_%s;\n".format(name)
                          case ("dclk",name,assign) => "wire io_%s;\n".format(name)
                          case ("out",name) => "wire io_%s;\n".format(name)
-                         case ("out",name,ul,dl,init) => "wire io_%s;\n".format(name)
-                         case ("out",name,ul,dl,init,assign) => "wire io_%s;\n".format(name)
+                         case ("out"|"wire",name) => "wire io_%s;\n".format(name)
+                         case ("out"|"wire",name,ul,dl) => "wire [%s:%s] io_%s;\n".format(ul,dl,name)
+                         case ("out"|"wire",name,ul,dl,init) => "wire [%s:%s] io_%s;\n".format(ul,dl,name)
+                         case ("out"|"wire",name,ul,dl,init,assign) => "wire io_%s;\n".format(name)
+                         case ("outs"|"wires",name,ul,dl) => "wire signed [%s:%s] io_%s;\n".format(ul,dl,name)
+                         case ("outs"|"wires",name,ul,dl,init) => "wire signed [%s:%s] io_%s;\n".format(ul,dl,name)
                          case _ => ""
                      }.mkString
 
-        val assdef="""//Wires for outputs \n"""+
+        val assdef="""//Assignments %n""".format()+
                      tbvars.ioseq.map{ 
-                         case ("dclk",name,assign) => "io_%s=io_%s;\n".format(name,assign)
-                         case ("out",name,ul,dl,init,assign) => "io_%s=io_%s;\n".format(name,assign)
-                         case ("in",name,ul,dl,init,assign) => "io_%s=io_%s;\n".format(name,assign)
+                         case ("dclk",name,"clock") => "assign io_%s=%s;\n".format(name,"clock")
+                         case ("dclk",name,assign) => "assign io_%s=io_%s;\n".format(name,assign)
+                         case ("out",name,ul,dl,init,assign) => "assign io_%s=io_%s;\n".format(name,assign)
+                         case ("in",name,ul,dl,init,assign) => "assign io_%s=io_%s;\n".format(name,assign)
                          case _ => ""
                      }.mkString
 
@@ -292,17 +287,9 @@ object tb_f2_dsp_tapein6 {
                         """|
                         |//File IO parameters
                         |integer StatusI, StatusO, infile, outfile;
-                        |integer count0;
-                        |integer count1;
-                        |integer count2;
-                        |integer count3;
                         |integer din1,din2,din3,din4,din5,din6,din7,din8;
                         |
                         |//Initializations
-                        |initial count0 = 0;
-                        |initial count1 = 0;
-                        |initial count2 = 0;
-                        |initial count3 = 0;
                         |initial clock = 1'b0;
                         |initial reset = 1'b0;
                         |initial outfile = $fopen(g_outfile,"w"); // For writing
@@ -314,9 +301,11 @@ object tb_f2_dsp_tapein6 {
                         |always @(posedge io_{{clk18}}) begin 
                         |    //Print only valid values 
                         |    if (~$isunknown(io_{{sig38}})) begin
-                        |        $fwrite(outfile, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", io_Z_0_real, io_Z_0_imag, 
-                        |                         io_Z_1_real, io_Z_1_imag, io_Z_2_real, 
-                        |                         io_Z_2_imag, io_Z_3_real, io_Z_3_imag);
+                        |        $fwrite(outfile, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", 
+                        |                         io_ofifo_bits_data_0_real, io_ofifo_bits_data_0_imag, 
+                        |                         io_ofifo_bits_data_1_real, io_ofifo_bits_data_1_imag, 
+                        |                         io_ofifo_bits_data_2_real, io_ofifo_bits_data_2_imag, 
+                        |                         io_ofifo_bits_data_3_real, io_ofifo_bits_data_3_imag);
                         |    end
                         |    else begin
                         |        $fwrite(outfile, "%d\t%d\t%d\t%d\t\%d\t%d\t%d\t%d\n",0,0,0,0,0,0,0,0);
@@ -334,30 +323,6 @@ object tb_f2_dsp_tapein6 {
                         |  .io_clkp4n(io_clkp4n), // @[:@6.4]
                         |  .io_clkp8n(io_clkp8n)// @[:@6.4]
                         |);
-                        |
-                        |assign io_{{clk4}}=io_{{clk0}};
-                        |assign io_{{clk5}}=io_{{clk1}};
-                        |assign io_{{clk6}}=io_{{clk2}};
-                        |assign io_{{clk7}}=io_{{clk3}};
-                        |assign io_{{clk8}}=io_{{clk0}};
-                        |assign io_{{clk9}}=io_{{clk1}};
-                        |assign io_{{clk10}}=io_{{clk2}};
-                        |assign io_{{clk11}}=io_{{clk3}};
-                        |assign io_{{clk12}}=io_{{clk0}};
-                        |assign io_{{clk13}}=io_{{clk1}};
-                        |assign io_{{clk14}}=io_{{clk2}};
-                        |assign io_{{clk15}}=io_{{clk3}};
-                        |
-                        |//symclks
-                        |assign io_{{clk16}}=io_{{clk3}};
-                        |assign io_{{clk17}}=io_{{clk1}};
-                        |//Fifos, are read with the symclock
-                        |assign io_{{clk18}}=io_{{clk3}};
-                        |assign io_{{clk19}}=io_{{clk3}};
-                        |assign io_{{clk20}}=clock;
-                        |assign io_{{clk21}}=clock;
-                        |assign io_{{clk22}}=clock;
-                        |assign io_{{clk23}}=clock;
                         |
                         |""".stripMargin('|')+dutdef+
                         """
@@ -387,37 +352,37 @@ object tb_f2_dsp_tapein6 {
                         |    io_{{sig21}} = g_antenna_index;
                         |    io_{{sig25}} = g_rx_output_mode;
                         |    io_{{sig27}} = g_adc_fifo_mode;
-                        |    io_{{sig36}} = 1;
                         |    io_Ndiv= c_ratio0;
                         |    //Resets
                         |    reset=1;
                         |    io_reset_clk=1;
+                        |    io_reset_adcfifo=1;
                         |    io_{{sig22}} = 1;
                         |    io_{{sig23}} = 1;
                         |    io_{{sig24}} = 1;
-                        |    io_{{sig42}} = 1;
+                        |    io_ofifo_ready = 1;
                         |    #RESET_TIME
                         |    reset=0;
                         |    io_reset_clk=0;
                         |    #(16*RESET_TIME)
+                        |    io_reset_adcfifo=0;
                         |    io_{{sig22}} = 0;
                         |    io_{{sig23}} = 0;
                         |    io_{{sig24}} = 0;
-                        |    io_{{sig42}} = 0;
                         |
                         |    infile = $fopen(g_infile,"r"); // For reading
                         |    while (!$feof(infile)) begin
                         |            @(posedge clock) 
                         |             StatusI=$fscanf(infile, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
                         |                             din1, din2, din3, din4,din5, din6, din7, din8);
-                        |             io_{{sig28}} <= din1;
-                        |             io_{{sig29}} <= din2;
-                        |             io_{{sig30}} <= din3;
-                        |             io_{{sig31}} <= din4;
-                        |             io_{{sig32}} <= din5;
-                        |             io_{{sig33}} <= din6;
-                        |             io_{{sig34}} <= din7;
-                        |             io_{{sig35}} <= din8;
+                        |             io_iptr_A_0_real <= din1;
+                        |             io_iptr_A_0_imag <= din2;
+                        |             io_iptr_A_1_real <= din3;
+                        |             io_iptr_A_1_imag <= din4;
+                        |             io_iptr_A_2_real <= din5;
+                        |             io_iptr_A_2_imag <= din6;
+                        |             io_iptr_A_3_real <= din7;
+                        |             io_iptr_A_3_imag <= din8;
                         |    end
                         |    $fclose(infile);
                         |    $fclose(outfile);
