@@ -50,7 +50,8 @@ object tb_f2_dsp_tapein6 {
           val decimator_modebits= 3
           val rx_output_modebits= 3
           val input_modebits= 3
-          val adc_fifo_modebits= 1
+          val adc_fifo_lut_modebits= 3
+          val adc_lut_width= 9
           val indexbits= 2
           val gainlimit=gainbits-1
           val clk0="decimator_controls_0_cic3clockslow"
@@ -187,7 +188,10 @@ object tb_f2_dsp_tapein6 {
                         ("in","reset_infifo"),
                         ("in","rx_output_mode",rx_output_modebits-1,0),
                         ("in","input_mode",input_modebits-1,0),
-                        ("in","adc_fifo_mode",adc_fifo_modebits-1,0),
+                        ("in","adc_fifo__lut_mode",adc_fifo_lut_modebits-1,0),
+                        ("in","adc_lut_write_addr",adc_lut_width-1,0),
+                        ("in","adc_lut_write_vals_0",adc_lut_width-1,0),
+                        ("in","adc_lut_write_en",0,0),
                         ("in","iptr_A_0_real",inputn-1,0),
                         ("in","iptr_A_0_imag",inputn-1,0),
                         ("in","iptr_A_1_real",inputn-1,0),

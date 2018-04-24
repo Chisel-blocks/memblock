@@ -11,31 +11,14 @@ import freechips.rocketchip.util._
 import f2_decimator._
 import f2_rx_path_tapein6._
 
-//class Z extends Bundle {
-//  val w = UInt(4.W)
-//  val z = UInt(8.W)
-//}
-
-//Creating arrays
-//Wires
-//class f2_dsp_decimator_controls(gainbits: Int) extends Bundle {
-//        val cic3integscale  = Input(UInt(gainbits.W))
-//        val hb1scale        = Input(UInt(gainbits.W))
-//        val hb2scale        = Input(UInt(gainbits.W))
-//        val hb3scale        = Input(UInt(gainbits.W))
-//        val mode            = Input(UInt(3.W))
-//        override def cloneType = (new f2_decimator_controls(gainbits)).asInstanceOf[this.type]
-//}
-class iofifosigs(n: Int) extends Bundle {
+class iofifosigs(val n: Int) extends Bundle {
         val data=Vec(4,DspComplex(SInt(n.W), SInt(n.W)))
         val index=UInt(2.W)
-        override def cloneType = (new iofifosigs(n)).asInstanceOf[this.type]
 }
 
 class f2_dsp_io(val inputn: Int=9, val n: Int=16, val antennas: Int=4, val users: Int=4) extends Bundle {
     val decimator_clocks   =  new f2_decimator_clocks    
-    val decimator_controls = Vec(4,new f2_decimator_controls(gainbits=10))    
-    //val iptr_A             = Vec(antennas,Flipped(DecoupledIO(DspComplex.wire(SInt(inputn.W), SInt(inputn.W)))))
+    val decimator_controls = Vec(antennas,new f2_decimator_controls(gainbits=10))    
     val iptr_A             = Input(Vec(antennas,DspComplex(SInt(inputn.W), SInt(inputn.W))))
     val adc_clocks         = Input(Vec(antennas,Clock()))
     val user_index         = Input(UInt(log2Ceil(users).W)) //W should be log2 of users
@@ -50,59 +33,43 @@ class f2_dsp_io(val inputn: Int=9, val n: Int=16, val antennas: Int=4, val users
     val reset_infifo       = Input(Bool())
     val rx_output_mode     = Input(UInt(3.W))
     val input_mode         = Input(UInt(3.W))
-    val adc_fifo_mode      = Input(UInt(1.W))
+    val adc_fifo_lut_mode = Input(UInt(3.W))
+    val adc_lut_write_addr = Input(UInt(inputn.W))
+    val adc_lut_write_vals = Input(Vec(antennas,DspComplex(SInt(inputn.W), SInt(inputn.W))))
+    val adc_lut_write_en   = Input(Bool())
     val ofifo              =  DecoupledIO(new iofifosigs(n=n))
     val iptr_fifo          =  Flipped(DecoupledIO(new iofifosigs(n=n)))
-    // Index to be transmitted. Indicates user, or antenna
-    //val index              =  Output(UInt(2.W))
 }
 
 class f2_dsp_tapein6 (inputn: Int=9, n: Int=16, antennas: Int=4, users: Int=4, fifodepth: Int=128 ) extends Module {
-    val io = IO( new f2_dsp_io(n=n,users=users)
+    val io = IO( new f2_dsp_io(inputn=inputn,users=users)
     )
     val iozerovec=VecInit(Seq.fill(4)(DspComplex.wire(0.S(n.W), 0.S(n.W))))
 
-    //RX ADC FIFO's
-    val adcproto=DspComplex(SInt(n.W),SInt(n.W))
-    val adcfifodepth=16
-
-    //There is a problem with the clone type of CrossingIO it is not defined
-    val adcfifo = Seq.fill(antennas){ Module (new AsyncQueue(adcproto,depth=adcfifodepth)).io }
-    (adcfifo,io.iptr_A).zipped.map(_.enq.bits:=_)
-    (adcfifo,io.adc_clocks).zipped.map(_.enq_clock:=_)
-    adcfifo.map(_.enq.valid:=true.B)
-    adcfifo.map(_.enq_reset:=io.reset_adcfifo)
-    adcfifo.map(_.deq_reset:=io.reset_adcfifo)
-    adcfifo.map(_.deq_clock:=clock)
-    adcfifo.map(_.deq.ready:=true.B)
-    
     //-The RX:s
     // Vec is required to do runtime adressing of an array i.e. Seq is not hardware structure
-    val rx_path  = VecInit(Seq.fill(antennas){ Module ( new  f2_rx_path_tapein6 (n=n, users=users)).io })
+    val rx_path  = VecInit(Seq.fill(antennas){ Module ( new  f2_rx_path_tapein6 (inputn=n, users=users)).io})
     //val rx_path  = Seq.fill(antennas){ Module ( new  f2_rx_path_tapein6 (n=n, users=users)).io }
-     
     //val w_inselect = Seq.fill(4)(Wire(DspComplex(SInt(inputn.W), SInt(inputn.W))))
     //val w_inselect = Wire(Vec(4,DspComplex(SInt(inputn.W), SInt(inputn.W))))
-    val w_inselect = Wire(Vec(4,DspComplex(SInt(inputn.W), SInt(inputn.W))))
     
-    when (io.adc_fifo_mode===0.U) {
-        (w_inselect,io.iptr_A).zipped.map(_:=_)
-    } .elsewhen (io.adc_fifo_mode===1.U) {
-       (w_inselect,adcfifo).zipped.map(_:=_.deq.bits)
-    } .otherwise {
-       w_inselect.map(_ := DspComplex.wire(0.S(inputn.W), 0.S(inputn.W)))
-    }
-
-    //RX input assignments        
     (rx_path,io.decimator_controls).zipped.map(_.decimator_controls:=_)
     rx_path.map(_.decimator_clocks:=io.decimator_clocks) 
-    (rx_path,w_inselect).zipped.map(_.iptr_A:=_)
+    (rx_path,io.iptr_A).zipped.map(_.iptr_A:=_)
+    rx_path.map(_.adc_fifo_lut_mode:=io.adc_fifo_lut_mode)
+    rx_path.map(_.adc_lut_write_addr:=io.adc_lut_write_addr)
+    rx_path.map(_.adc_lut_write_en:=io.adc_lut_write_en)
+    rx_path.map(_.reset_adcfifo:=io.reset_adcfifo)
+    (rx_path,io.adc_clocks).zipped.map(_.adc_clock:=_)
+    (rx_path,io.adc_lut_write_vals).zipped.map(_.adc_lut_write_val:=_)
 
     //---Input fifo from serdes
     //Reformulate to RX compliant format.
     val infifo = Module(new AsyncQueue(new iofifosigs(n=n),depth=fifodepth)).io
-    val r_iptr_fifo=  withClock(io.clock_symrate)(RegInit(VecInit(Seq.fill(4)(DspComplex.wire(0.S(n.W), 0.S(n.W))))))
-    val r_iptr_index= withClock(io.clock_symrate)(RegInit(0.U(2.W))) //For sake of symmetry,dunno if needed
+    val r_iptr_fifo=  withClock(io.clock_symrate)(RegInit(VecInit(Seq.fill(4)
+                         (DspComplex.wire(0.S(n.W), 0.S(n.W))))))
+    //For sake of symmetry,dunno if needed
+    val r_iptr_index= withClock(io.clock_symrate)(RegInit(0.U(2.W))) 
     val zero :: userssum :: Nil = Enum(2)
     val inputmode=RegInit(zero)
     
@@ -122,8 +89,8 @@ class f2_dsp_tapein6 (inputn: Int=9, n: Int=16, antennas: Int=4, users: Int=4, f
         inputmode:=zero
         infifo.deq.ready:=false.B
     }
-
    //--Serdes Input fifo ends here
+
     when ( (infifo.deq.valid) && (inputmode===userssum)) { 
         r_iptr_index := infifo.deq.bits.index
         r_iptr_fifo:=infifo.deq.bits.data
@@ -225,8 +192,9 @@ class f2_dsp_tapein6 (inputn: Int=9, n: Int=16, antennas: Int=4, users: Int=4, f
     //Clock multiplexing does not work. Use valid to control output rate.
     val validcount  = withClockAndReset(io.clock_symratex4,io.reset_outfifo)(RegInit(0.U(2.W)))
     val validreg =  withClockAndReset(io.clock_symratex4,io.reset_outfifo)(RegInit(false.B))
-    //control the valid signaö for the interface
-    when ( (mode===bypass) ||  (mode===select_users) ||  (mode===select_antennas) || (mode===select_both) || (mode===stream_sum)  ) {
+    //control the valid signal for the interface
+    when ( (mode===bypass) ||  (mode===select_users) ||  (mode===select_antennas) 
+        || (mode===select_both) || (mode===stream_sum)  ) {
         // In these modes, the write rate is symrate
         when (validcount===3.U) {
             validcount:=0.U
@@ -282,7 +250,7 @@ class f2_dsp_tapein6 (inputn: Int=9, n: Int=16, antennas: Int=4, users: Int=4, f
     //Here we reformat the output signals to a single bitvector
     when ( outfifo.enq.ready ){
         outfifo.enq.bits.data:=w_Z
-        outfifo.enq.bits.index:=index
+        outfifo.enq.bits.index:=w_index
     } .otherwise {
         outfifo.enq.bits.data:=iozerovec
         outfifo.enq.bits.index:=0.U
