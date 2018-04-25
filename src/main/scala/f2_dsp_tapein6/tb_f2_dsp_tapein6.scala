@@ -207,6 +207,7 @@ object tb_f2_dsp_tapein6 {
                         |integer StatusI, StatusO, infile, outfile;
                         |integer din1,din2,din3,din4,din5,din6,din7,din8;
                         |integer memaddrcount;
+                        |integer initdone;
                         |
                         |//Initializations
                         |initial clock = 1'b0;
@@ -217,9 +218,9 @@ object tb_f2_dsp_tapein6 {
                         |always #(c_Ts)clock = !clock ;
                         | 
                         |//Read this with Ouput fifo enquque clk
-                        |always @(posedge io_clock_symrate) begin 
+                        |always @(posedge io_clock_symrate && (initdone==1)) begin 
                         |    //Print only valid values 
-                        |    if (~$isunknown(io_ofifo_bits_data_0_real)) begin
+                        |    if (~$isunknown(io_ofifo_bits_data_0_real) ) begin
                         |        $fwrite(outfile, "%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n", 
                         |                         io_ofifo_bits_data_0_real, io_ofifo_bits_data_0_imag, 
                         |                         io_ofifo_bits_data_1_real, io_ofifo_bits_data_1_imag, 
@@ -227,7 +228,7 @@ object tb_f2_dsp_tapein6 {
                         |                         io_ofifo_bits_data_3_real, io_ofifo_bits_data_3_imag);
                         |    end
                         |    else begin
-                        |        $fwrite(outfile, "%d\t%d\t%d\t%d\t\%d\t%d\t%d\t%d\n",0,0,0,0,0,0,0,0);
+                        |         $display( $time, "Dropping invalid output values at ");
                         |    end 
                         |end
                         |
@@ -273,6 +274,7 @@ object tb_f2_dsp_tapein6 {
                         |       memaddrcount=memaddrcount+1;
                         |       io_adc_lut_write_en<=0;
                         |    end
+                        |    initdone=1;
                         |    infile = $fopen(g_infile,"r"); // For reading
                         |    while (!$feof(infile)) begin
                         |            @(posedge clock) 
