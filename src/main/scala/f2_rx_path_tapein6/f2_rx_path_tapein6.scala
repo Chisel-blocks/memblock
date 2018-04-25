@@ -92,7 +92,7 @@ class f2_rx_path_tapein6 (inputn: Int=9, n: Int=16, users: Int=4) extends Module
     } 
     .otherwise {
         w_lutoutdata.real:=adclut_real.read(w_lutreadaddress.real.asUInt)
-        w_lutoutdata.imag:=adclut_real.read(w_lutreadaddress.imag.asUInt)
+        w_lutoutdata.imag:=adclut_imag.read(w_lutreadaddress.imag.asUInt)
     }
     //RX input assignments        
     decimator.iptr_A:=w_inselect

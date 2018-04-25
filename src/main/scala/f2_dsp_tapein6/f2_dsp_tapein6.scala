@@ -17,16 +17,16 @@ class iofifosigs(val n: Int) extends Bundle {
 }
 
 class f2_dsp_io(val inputn: Int=9, val n: Int=16, val antennas: Int=4, val users: Int=4) extends Bundle {
+    val iptr_A             = Input(Vec(antennas,DspComplex(SInt(inputn.W), SInt(inputn.W))))
     val decimator_clocks   =  new f2_decimator_clocks    
     val decimator_controls = Vec(antennas,new f2_decimator_controls(gainbits=10))    
-    val iptr_A             = Input(Vec(antennas,DspComplex(SInt(inputn.W), SInt(inputn.W))))
     val adc_clocks         = Input(Vec(antennas,Clock()))
-    val user_index         = Input(UInt(log2Ceil(users).W)) //W should be log2 of users
-    val antenna_index      = Input(UInt(log2Ceil(antennas).W)) //W should be log2 of users
     val clock_symrate      = Input(Clock())
     val clock_symratex4    = Input(Clock())
     val clock_outfifo_deq  = Input(Clock())
     val clock_infifo_enq   = Input(Clock())
+    val user_index         = Input(UInt(log2Ceil(users).W)) //W should be log2 of users
+    val antenna_index      = Input(UInt(log2Ceil(antennas).W)) //W should be log2 of users
     val reset_index_count  = Input(Bool())
     val reset_adcfifo      = Input(Bool())
     val reset_outfifo      = Input(Bool())
