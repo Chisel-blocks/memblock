@@ -4,7 +4,7 @@
 //Start with a static tb and try to genererate a gnerator for it
 // This uses clkdiv_n_2_4_8 verilog. You need to compile it separately
 
-package f2_dsp_rx_path
+package f2_rx_path
 
 import chisel3._
 import java.io.{File, FileWriter, BufferedWriter}
@@ -12,7 +12,7 @@ import com.gilt.handlebars.scala.binding.dynamic._
 import com.gilt.handlebars.scala.Handlebars
 
 //Testbench.
-object tb_f2_dsp_rx_path {
+object tb_f2_rx_path {
     def extpargen(): String={
         val extpars=Seq(("g_infile","\"./A.txt\""), 
                         ("g_outfile","\"./Z.txt\""),

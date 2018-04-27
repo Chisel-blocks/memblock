@@ -5,135 +5,99 @@ package f2_rx_path
 import chisel3._
 import chisel3.util._
 import chisel3.experimental._
-import chisel3.experimental._
 import dsptools._
 import dsptools.numbers._
+import freechips.rocketchip.util._
 import f2_decimator._
-import ofdm._
-
-//class SyncIO[T <: Data](params: SyncParams[T]) extends Bundle {
-//    //val in = Flipped(Valid(params.protoIn))
-//    val packetDetect = Output(Bool())
-//
-//    val autocorrConfig   = new AutocorrConfigIO(params.autocorrParams)
-//    val peakDetectConfig = new PeakDetectConfigIO(params.peakDetectParams)
-//    val autocorrFF       = Input(params.peakDetectParams.protoEnergyFF)
-//    val freqScaleFactor  = Input(params.protoAngle)
-//}
 
 
-class sync_config_io[T <: Data](params: SyncParams[T]) extends Bundle {
-    val packetDetect     = Output(Bool())
-    val autocorrConfig   = new AutocorrConfigIO(params.autocorrParams)
-    val peakDetectConfig = new PeakDetectConfigIO(params.peakDetectParams)
-    val autocorrFF       = Input(params.peakDetectParams.protoEnergyFF)
-    val freqScaleFactor  = Input(params.protoAngle)
-}
-//
-//class f2_dsp_io[T <: Data](n: Int=16, users: Int=2, params: SyncParams[T] ) extends SyncIO(params) {
-class f2_dsp_io[T <: Data](n: Int=16, users: Int=2, params: SyncParams[T] ) extends Bundle {
+class f2_rx_path_io(val inputn: Int=9, val n: Int=16,  val users: Int=4 ) extends Bundle {
+    val decimator_clocks   = new f2_decimator_clocks()
     val decimator_controls = new f2_decimator_controls(gainbits=10)
-    val sync_config        = new sync_config_io(params=params)
-    val mode               = Input(UInt(2.W))
-    val iptr_A             = Input(DspComplex(SInt(n.W), SInt(n.W)))
-    val Z                  = Output(Vec(users,DspComplex(SInt(n.W), SInt(n.W))))
+    val adc_clock          = Input(Clock())
+    val reset_adcfifo      = Input(Bool())
+    val adc_fifo_lut_mode  = Input(UInt(3.W))
+    val adc_lut_write_addr = Input(UInt(inputn.W))
+    val adc_lut_write_val = Input(DspComplex(SInt(inputn.W), SInt(inputn.W)))
+    val adc_lut_write_en   = Input(Bool())
+    val iptr_A      = Input(DspComplex(SInt(inputn.W), SInt(inputn.W)))
+    val Z           = Output(Vec(users,DspComplex(SInt(n.W), SInt(n.W))))
 }
-//Sync_inputs
-//  input         clock, // @[:@6008.4]
-//  input         reset, // @[:@6009.4]
-//  input         io_in_valid, // @[:@6010.4]
-//  input  [15:0] io_in_bits_real, // @[:@6010.4]
-//  input  [15:0] io_in_bits_imag, // @[:@6010.4]
-//  output        io_out_valid, // @[:@6010.4]
-//  output [15:0] io_out_bits_real, // @[:@6010.4]
-//  output [15:0] io_out_bits_imag, // @[:@6010.4]
-//  output        io_packetDetect, // @[:@6010.4]
-//  input  [7:0]  io_autocorrConfig_depthApart, // @[:@6010.4]
-//  input  [7:0]  io_autocorrConfig_depthOverlap, // @[:@6010.4]
-//  input  [31:0] io_peakDetectConfig_energyFF, // @[:@6010.4]
-//  input  [31:0] io_peakDetectConfig_energyMult, // @[:@6010.4]
-//  input  [31:0] io_peakDetectConfig_accumMult, // @[:@6010.4]
-//  input  [31:0] io_peakDetectConfig_energyOffset, // @[:@6010.4]
-//  input  [6:0]  io_peakDetectConfig_idlePeriod, // @[:@6010.4]
-//  input  [31:0] io_autocorrFF, // @[:@6010.4]
-//  input  [31:0] io_freqScaleFactor // @[:@6010.4]
 
-class f2_rx_path (n: Int=16, users: Int=2, resolution: Int=32) extends Module {
-    //How to define Sint
-    val protoIn  = SInt(n.W)
-    val protoOut = SInt(n.W)
-    val protoCORDIC = SInt(n.W)
-    val protoAutocorr = protoIn
-    val protoBig = SInt(resolution.W)
-    val protoAngle = SInt(resolution.W)
-    val stfParams = SyncParams(
-    protoIn = DspComplex(protoIn, protoIn),
-    protoOut = DspComplex(protoOut, protoOut),
-    filterProtos = (protoIn, protoIn, protoIn),
-    filterConstructor = (pIn: SInt, pOut: SInt, pCoeff: SInt) => new STF64MatchedFilter(pIn, pOut, pCoeff),
-    protoAngle = protoAngle,
-        autocorrParams = AutocorrParams(
-            protoIn = DspComplex(protoAutocorr, protoAutocorr),
-            maxApart = 128,
-            maxOverlap = 128
-        ),
-        peakDetectParams = PeakDetectParams(
-            protoCorr = protoCORDIC,
-            protoEnergyFF = protoBig,
-            protoEnergyMult = protoBig,
-            windowSize = 16
-        ),
-        ncoParams = NCOParams(
-            phaseWidth = 32,
-            1024,
-            {x: UInt => x.asTypeOf(protoAngle)},
-            protoFreq = protoAngle,
-            protoOut = SInt(resolution.W)
-        )
+class f2_rx_path (inputn: Int=9, n: Int=16, users: Int=4) extends Module {
+    val io = IO( new f2_rx_path_io(inputn=inputn,users=users)
     )
-    val io = IO( new f2_dsp_io(n=n,users=users, params=stfParams))
+  
+    val decimator  = Module ( new  f2_decimator (n=n, resolution=32, coeffres=16, gainbits=10)).io
+    io.decimator_controls<>decimator.controls
+    io.decimator_clocks<>decimator.clocks
+    val adcproto=DspComplex(SInt(n.W),SInt(n.W))  
+    val adcfifodepth=16
+    val adcfifo = Module (new AsyncQueue(adcproto,depth=adcfifodepth)).io
+    adcfifo.enq_clock:=io.adc_clock
+    adcfifo.enq.valid:=true.B
+    adcfifo.enq_reset:=io.reset_adcfifo
+    adcfifo.deq_reset:=io.reset_adcfifo
+    adcfifo.deq_clock:=clock
+    adcfifo.deq.ready:=true.B
+
+    //ADC lookup tables
+    val adclut_real= Mem(scala.math.pow(2,9).toInt,SInt(inputn.W))
+    val adclut_imag= Mem(scala.math.pow(2,9).toInt,SInt(inputn.W))
+    val w_lutoutdata= RegInit(DspComplex.wire(0.S(inputn.W),0.S(inputn.W)))
+    //val w_lutoutdata = Wire(DspComplex(SInt(inputn.W), SInt(inputn.W)))
+    val w_lutreadaddress= RegInit(DspComplex.wire(0.S(inputn.W),0.S(inputn.W)))
+
+    //Input selection wire
+    val w_inselect = Wire(DspComplex(SInt(inputn.W), SInt(inputn.W)))
+
+    when (io.adc_fifo_lut_mode===0.U) {
+        //Bypass FIFO and LUT
+        w_inselect:=io.iptr_A
+        adcfifo.enq.bits:= io.iptr_A
+        w_lutreadaddress.real:= io.adc_lut_write_addr.asSInt
+        w_lutreadaddress.imag:= io.adc_lut_write_addr.asSInt
+    } .elsewhen (io.adc_fifo_lut_mode===1.U) {
+        //LUT bypassed, FIFO active
+        adcfifo.enq.bits:=io.iptr_A
+        w_inselect:=adcfifo.deq.bits
+    } .elsewhen (io.adc_fifo_lut_mode===2.U) {
+       //FIFO active, LUt active
+       adcfifo.enq.bits:=io.iptr_A
+       w_lutreadaddress:=adcfifo.deq.bits
+       w_inselect:=w_lutoutdata
+    } .elsewhen (io.adc_fifo_lut_mode===3.U) {
+       //FIFO active, LUT active, LUT first
+       //Sync problem assumed
+       w_lutreadaddress:=io.iptr_A
+       adcfifo.enq.bits:=w_lutoutdata
+       w_inselect:=adcfifo.deq.bits
+    } .elsewhen (io.adc_fifo_lut_mode===4.U) {
+       //LUT active, FIFO bypassed
+       //Sync problem assumed
+       adcfifo.enq.bits:= io.iptr_A
+       w_lutreadaddress:=io.iptr_A
+       w_inselect:=w_lutoutdata
+    } .otherwise {
+       adcfifo.enq.bits:= io.iptr_A
+       w_inselect:=adcfifo.deq.bits
+    }
     
-    //State definitions
-    val bypass :: decimate :: detect :: Nil = Enum(3)
-    //Select state
-    val state=RegInit(bypass)
-
-    //Decoder for the modes
-    when(io.mode===0.U){
-        state := bypass
-    } .elsewhen(io.mode===1.U) {
-        state := decimate
-    } .elsewhen(io.mode===2.U) {
-        state := detect
-    }.otherwise {
-        state := bypass
+    //Enabled read
+    when (io.adc_lut_write_en===true.B) {
+        adclut_real.write(io.adc_lut_write_addr,io.adc_lut_write_val.real)
+        adclut_imag.write(io.adc_lut_write_addr,io.adc_lut_write_val.imag)
+        //w_lutoutdata.real:=adclut_real.read(w_lutreadaddress.real.asUInt)
+        //w_lutoutdata.imag:=adclut_real.read(w_lutreadaddress.imag.asUInt)
+    } 
+    .otherwise {
+        w_lutoutdata.real:=adclut_real.read(w_lutreadaddress.real.asUInt)
+        w_lutoutdata.imag:=adclut_imag.read(w_lutreadaddress.imag.asUInt)
     }
-
-    val decimator  = Module ( new  f2_decimator (n=16, resolution=32, coeffres=16, gainbits=10))
-    io.decimator_controls<>decimator.io.controls
-    decimator.io.iptr_A:=io.iptr_A
-
-    //val ofdm_sync = withClock(decimator.io.controls.hb3clock_low)( Module( new Sync(params=stfParams) ))
-    //ofdm_sync.io.in.bits:=decimator.io.Z
-
-    for ( i <- 0 to users-1 ) { 
-        
-        switch(state){ 
-            is(bypass) {
-                io.Z(i):=(RegNext(io.iptr_A))
-            }
-            is(decimate) {
-                io.Z(i):=decimator.io.Z
-            }
-            is(detect){
-                //io.Z(i):=ofdm_sync.io.out.bits
-            }
-        }
-    }
-    io.sync_config.packetDetect:=DontCare
+    //RX input assignments        
+    decimator.iptr_A:=w_inselect
+    io.Z.map(_:=decimator.Z)
 }
-
-
 //This gives you verilog
 object f2_rx_path extends App {
   chisel3.Driver.execute(args, () => new f2_rx_path)

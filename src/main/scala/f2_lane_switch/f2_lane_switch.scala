@@ -6,24 +6,42 @@ import chisel3.experimental._
 import dsptools._
 import dsptools.numbers._
 import freechips.rocketchip.util._
-import f2_dsp_tapein6._
+import f2_rx_dsp._
 
-class f2_lane_switch_io(val n: Int=16, val dspios: Int=7, val serdesios: Int=6) extends Bundle {
+class f2_lane_switch_io(
+    val n: Int=16,
+    val todspios: Int=4,
+    val fromdspios: Int=1,
+    val serdesios: Int=6
+) extends Bundle {
     //input comes from Lane and goes to SerDes
-    val from_dsp             = Vec(dspios,Flipped(DecoupledIO(new iofifosigs(n=n))))
-    val from_dsp_memory      = Vec(dspios,Flipped(DecoupledIO(new iofifosigs(n=n))))
-    val to_dsp               = Vec(dspios,DecoupledIO(new iofifosigs(n=n)))
-    val to_dsp_mode          = Vec(dspios,Input(UInt(2.W))) //Off/on
-    val dsp_to_serdes_address= Vec(serdesios,Input(UInt(log2Ceil(dspios).W))) //every serdes has 7 sources
-    val serdes_to_dsp_address= Vec(dspios,Input(UInt(log2Ceil(serdesios).W)))  //7 dsp dspios has 6 serdes sources
+    val from_dsp             = Vec(fromdspios,Flipped(DecoupledIO(new iofifosigs(n=n))))
+    val from_dsp_memory      = Vec(fromdspios,Flipped(DecoupledIO(new iofifosigs(n=n))))
+    val to_dsp               = Vec(todspios,DecoupledIO(new iofifosigs(n=n)))
+    val to_dsp_mode          = Vec(todspios,Input(UInt(2.W))) //Off/on/scan
+    val dsp_to_serdes_address= Vec(serdesios,Input(UInt(log2Ceil(fromdspios).W))) //every serdes has 7 sources
+    val serdes_to_dsp_address= Vec(todspios,Input(UInt(log2Ceil(serdesios).W)))  //7 dsp dspios has 6 serdes sources
     val from_serdes          = Vec(serdesios,Flipped(DecoupledIO(new iofifosigs(n=n))))
     val from_serdes_scan     = Vec(serdesios,Flipped(DecoupledIO(new iofifosigs(n=n))))
     val to_serdes            = Vec(serdesios,DecoupledIO(new iofifosigs(n=n)))
-    val to_serdes_mode       = Vec(serdesios,Input(UInt(2.W))) //Off/On/Scan
+    val to_serdes_mode       = Vec(serdesios,Input(UInt(2.W))) //Off/On/memory
 }
 
-class f2_lane_switch (n: Int=16, dspios: Int=7, serdesios: Int=6 ) extends Module {
-    val io = IO( new f2_lane_switch_io(n=n,dspios=dspios,serdesios=serdesios))
+class f2_lane_switch (
+        n: Int=16, 
+        todspios: Int=4,
+        fromdspios: Int=1,
+        serdesios: Int=6 
+    ) extends Module {
+
+    val io = IO( 
+        new f2_lane_switch_io(
+            n=n,
+            fromdspios=fromdspios,
+            todspios=todspios,
+            serdesios=serdesios
+        )
+    )
     val iozerovec=VecInit(Seq.fill(4)(DspComplex.wire(0.S(n.W), 0.S(n.W))))
    
     //Defaults
@@ -35,7 +53,7 @@ class f2_lane_switch (n: Int=16, dspios: Int=7, serdesios: Int=6 ) extends Modul
     io.to_serdes.map(_.valid:=false.B)
 
     //From SerDes to dsp routing
-    for ( i <- 0 to 6) {
+    for ( i <- 0 to todspios-1 ) {
         when ( io.to_dsp_mode(i)===0.U) {
             io.to_dsp(i).bits.data:=iozerovec
             io.to_dsp(i).bits.index:=0.U
@@ -52,7 +70,7 @@ class f2_lane_switch (n: Int=16, dspios: Int=7, serdesios: Int=6 ) extends Modul
 
     }
     //From Dsp to SerDes routing
-    for ( i <- 0 to 5) {
+    for ( i <- 0 to serdesios-1) {
         when ( io.to_serdes_mode(i)===0.U) {
             io.to_serdes(i).bits.data:=iozerovec
             io.to_serdes(i).bits.index:=0.U
@@ -71,6 +89,6 @@ class f2_lane_switch (n: Int=16, dspios: Int=7, serdesios: Int=6 ) extends Modul
 
 //This gives you verilog
 object f2_lane_switch extends App {
-  chisel3.Driver.execute(args, () => new f2_lane_switch(n=16, dspios=7, serdesios=6))
+  chisel3.Driver.execute(args, () => new f2_lane_switch(n=16, todspios=4, fromdspios=1, serdesios=6))
 }
 
