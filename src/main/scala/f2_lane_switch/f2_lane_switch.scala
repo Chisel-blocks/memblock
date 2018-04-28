@@ -42,7 +42,8 @@ class f2_lane_switch (
             serdesios=serdesios
         )
     )
-    val iozerovec=VecInit(Seq.fill(4)(DspComplex.wire(0.S(n.W), 0.S(n.W))))
+    //Zeros
+    val iofifozero = 0.U.asTypeOf(new iofifosigs(n=n))
    
     //Defaults
     io.from_dsp.map(_.ready:=false.B)
@@ -55,16 +56,14 @@ class f2_lane_switch (
     //From SerDes to dsp routing
     for ( i <- 0 to todspios-1 ) {
         when ( io.to_dsp_mode(i)===0.U) {
-            io.to_dsp(i).bits.data:=iozerovec
-            io.to_dsp(i).bits.index:=0.U
+            io.to_dsp(i).bits:=iofifozero
             io.to_dsp(i).valid:=1.U
         } .elsewhen ( io.to_dsp_mode(i)===1.U) {
             io.to_dsp(i)<>io.from_serdes(io.serdes_to_dsp_address(i))
         } .elsewhen ( io.to_dsp_mode(i)===2.U) {
             io.to_dsp(i)<>io.from_serdes_scan(io.serdes_to_dsp_address(i))
         } .otherwise {
-            io.to_dsp(i).bits.data:=iozerovec
-            io.to_dsp(i).bits.index:=0.U
+            io.to_dsp(i).bits:=iofifozero
             io.to_dsp(i).valid:=1.U
         }
 
@@ -72,16 +71,14 @@ class f2_lane_switch (
     //From Dsp to SerDes routing
     for ( i <- 0 to serdesios-1) {
         when ( io.to_serdes_mode(i)===0.U) {
-            io.to_serdes(i).bits.data:=iozerovec
-            io.to_serdes(i).bits.index:=0.U
+            io.to_serdes(i).bits:=iofifozero
             io.to_serdes(i).valid:=1.U
         } .elsewhen ( io.to_serdes_mode(i)===1.U) {
             io.to_serdes(i)<>io.from_dsp(io.dsp_to_serdes_address(i))
         } .elsewhen ( io.to_serdes_mode(i)===2.U) {
             io.to_serdes(i)<>io.from_dsp_memory(io.dsp_to_serdes_address(i))
         } .otherwise { 
-            io.to_serdes(i).bits.data:=iozerovec
-            io.to_serdes(i).bits.index:=0.U
+            io.to_serdes(i).bits:=iofifozero
             io.to_serdes(i).valid:=1.U
        }
    }
