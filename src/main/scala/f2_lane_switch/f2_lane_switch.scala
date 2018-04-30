@@ -9,29 +9,31 @@ import freechips.rocketchip.util._
 import f2_rx_dsp._
 
 class f2_lane_switch_io(
-    val n: Int=16,
-    val todspios: Int=4,
+    val n         : Int=16,
+    val users     : Int=4,
+    val todspios  : Int=4,
     val fromdspios: Int=1,
-    val serdesios: Int=6
+    val serdesios : Int=6
 ) extends Bundle {
     //input comes from Lane and goes to SerDes
-    val from_dsp             = Vec(fromdspios,Flipped(DecoupledIO(new iofifosigs(n=n))))
-    val from_dsp_memory      = Vec(fromdspios,Flipped(DecoupledIO(new iofifosigs(n=n))))
-    val to_dsp               = Vec(todspios,DecoupledIO(new iofifosigs(n=n)))
+    val from_dsp             = Vec(fromdspios,Flipped(DecoupledIO(new iofifosigs(n=n,users=users))))
+    val to_dsp               = Vec(todspios,DecoupledIO(new iofifosigs(n=n,users=users)))
     val to_dsp_mode          = Vec(todspios,Input(UInt(2.W))) //Off/on/scan
     val dsp_to_serdes_address= Vec(serdesios,Input(UInt(log2Ceil(fromdspios).W))) //every serdes has 7 sources
     val serdes_to_dsp_address= Vec(todspios,Input(UInt(log2Ceil(serdesios).W)))  //7 dsp dspios has 6 serdes sources
-    val from_serdes          = Vec(serdesios,Flipped(DecoupledIO(new iofifosigs(n=n))))
-    val from_serdes_scan     = Vec(serdesios,Flipped(DecoupledIO(new iofifosigs(n=n))))
-    val to_serdes            = Vec(serdesios,DecoupledIO(new iofifosigs(n=n)))
+    val from_serdes          = Vec(serdesios,Flipped(DecoupledIO(new iofifosigs(n=n,users=users))))
+    val to_serdes            = Vec(serdesios,DecoupledIO(new iofifosigs(n=n,users=users)))
     val to_serdes_mode       = Vec(serdesios,Input(UInt(2.W))) //Off/On/memory
+    //These are scans to feed constant to serdes 
+    val from_serdes_scan     = Vec(serdesios,Flipped(DecoupledIO(new iofifosigs(n=n,users=users))))
+    val from_dsp_scan        = Vec(serdesios,Flipped(DecoupledIO(new iofifosigs(n=n,users=users))))
 }
 
 class f2_lane_switch (
-        n: Int=16, 
-        todspios: Int=4,
+        n         : Int =16, 
+        todspios  : Int=4,
         fromdspios: Int=1,
-        serdesios: Int=6 
+        serdesios : Int=6 
     ) extends Module {
 
     val io = IO( 
@@ -46,9 +48,9 @@ class f2_lane_switch (
     val iofifozero = 0.U.asTypeOf(new iofifosigs(n=n))
    
     //Defaults
-    io.from_dsp.map(_.ready:=false.B)
-    io.from_dsp_memory.map(_.ready:=false.B)
     io.from_serdes_scan.map(_.ready:=false.B)
+    io.from_dsp_scan.map(_.ready:=false.B)
+    io.from_dsp.map(_.ready:=false.B)
     io.from_serdes.map(_.ready:=false.B)
     io.to_dsp.map(_.valid:=false.B)
     io.to_serdes.map(_.valid:=false.B)
@@ -62,6 +64,7 @@ class f2_lane_switch (
             io.to_dsp(i)<>io.from_serdes(io.serdes_to_dsp_address(i))
         } .elsewhen ( io.to_dsp_mode(i)===2.U) {
             io.to_dsp(i)<>io.from_serdes_scan(io.serdes_to_dsp_address(i))
+            io.from_serdes_scan.map(_.ready:=true.B)
         } .otherwise {
             io.to_dsp(i).bits:=iofifozero
             io.to_dsp(i).valid:=1.U
@@ -76,7 +79,7 @@ class f2_lane_switch (
         } .elsewhen ( io.to_serdes_mode(i)===1.U) {
             io.to_serdes(i)<>io.from_dsp(io.dsp_to_serdes_address(i))
         } .elsewhen ( io.to_serdes_mode(i)===2.U) {
-            io.to_serdes(i)<>io.from_dsp_memory(io.dsp_to_serdes_address(i))
+            io.to_serdes(i)<>io.from_dsp_scan(io.dsp_to_serdes_address(i))
         } .otherwise { 
             io.to_serdes(i).bits:=iofifozero
             io.to_serdes(i).valid:=1.U

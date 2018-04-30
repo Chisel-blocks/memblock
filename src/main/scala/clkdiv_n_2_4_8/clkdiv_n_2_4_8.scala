@@ -1,15 +1,13 @@
 // Clk divider. Initiallyl  written by Marko Kosunen
 // Divides input clock by N, 2N , 4N and 8N
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 26.03.2018 16:49
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 30.04.2018 11:00
 package clkdiv_n_2_4_8
 
 import chisel3.experimental._
 import chisel3._
-import halfband_BW_045_N_40._
 import dsptools._
 import dsptools.numbers._
 import breeze.math.Complex
-class regcustom
 
 class clkdiv_n_2_4_8 (n: Int=8) extends Module {
     val io = IO(new Bundle {
