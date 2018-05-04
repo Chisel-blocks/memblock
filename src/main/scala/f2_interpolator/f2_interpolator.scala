@@ -9,31 +9,29 @@ import dsptools.numbers._
 import halfband_BW_045_N_40._
 import halfband_BW_0225_N_8._
 import halfband_BW_01125_N_6._
-import halfband._
-import cic3._
+import halfband_interpolator._
+import cic3_interpolator._
 
 class f2_interpolator_clocks extends Bundle {
-        val cic3clockslow   = Input(Clock())
-        val hb1clock_low    = Input(Clock())
-        val hb2clock_low    = Input(Clock())
-        val hb3clock_low    = Input(Clock())
+        val cic3clockfast   = Input(Clock())
+        val hb1clock_high    = Input(Clock())
+        val hb2clock_high    = Input(Clock())
+        val hb3clock_high    = Input(Clock())
 }
 
 class f2_interpolator_controls(val gainbits: Int) extends Bundle {
-        val cic3integscale  = Input(UInt(gainbits.W))
+        val cic3derivscale  = Input(UInt(gainbits.W))
         val hb1scale        = Input(UInt(gainbits.W))
         val hb2scale        = Input(UInt(gainbits.W))
         val hb3scale        = Input(UInt(gainbits.W))
         val mode            = Input(UInt(3.W))
-        //override def cloneType = (new f2_interpolator_controls(gainbits)).asInstanceOf[this.type]
 }
 
-class f2_interpolator_io(n: Int, gainbits: Int) extends Bundle {
+class f2_interpolator_io(val n: Int, val gainbits: Int) extends Bundle {
         val clocks          = new f2_interpolator_clocks
         val controls        = new f2_interpolator_controls(gainbits=gainbits)
         val iptr_A          = Input(DspComplex(SInt(n.W), SInt(n.W)))
         val Z               = Output(DspComplex(SInt(n.W), SInt(n.W)))
-        override def cloneType = (new f2_interpolator_io(n,gainbits)).asInstanceOf[this.type]
 }
 
 class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits: Int=10) extends Module {
@@ -62,35 +60,50 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
 
     
     //Reset initializations
-    val cic3reset = Wire(Bool())
-    cic3reset     :=reset.toBool
-    val cic3= withClockAndReset(clock,cic3reset)(Module( new cic3(n=n,resolution=resolution,gainbits=gainbits)))
-
     val hb1reset = Wire(Bool())
-    hb1reset     :=reset.toBool
-    val hb1 = withClockAndReset(io.clocks.cic3clockslow,hb1reset)(Module( new halfband( n=16, resolution=32,coeffs=halfband_BW_01125_N_6.H.map(_ * (math.pow(2,coeffres-1)-1)).map(_.toInt))))
+    hb1reset    :=reset.toBool
+    val hb1 = withClockAndReset(clock,hb1reset)(Module( 
+        new halfband_interpolator( 
+            n=n, resolution=resolution,coeffs=halfband_BW_045_N_40.H.map(_ * (math.pow(2,coeffres-1)-1)).map(_.toInt)
+        )
+    ))
+
 
     val hb2reset = Wire(Bool())
     hb2reset     :=reset.toBool
-    val hb2 = withClockAndReset(io.clocks.hb1clock_low,hb2reset)(Module( new halfband( n=16, resolution=32,coeffs=halfband_BW_0225_N_8.H.map(_ * (math.pow(2,coeffres-1)-1)).map(_.toInt))))
+    val hb2 = withClockAndReset(io.clocks.hb1clock_high,hb2reset)(Module( 
+        new halfband_interpolator( 
+            n=n, resolution=resolution,coeffs=halfband_BW_0225_N_8.H.map(_ * (math.pow(2,coeffres-1)-1)).map(_.toInt)
+        )
+    ))
 
     val hb3reset = Wire(Bool())
-    hb3reset    :=reset.toBool
-    val hb3 = withClockAndReset(io.clocks.hb2clock_low,hb3reset)(Module( new halfband( n=16, resolution=32,coeffs=halfband_BW_045_N_40.H.map(_ * (math.pow(2,coeffres-1)-1)).map(_.toInt))))
+    hb3reset     :=reset.toBool
+    val hb3 = withClockAndReset(io.clocks.hb2clock_high,hb3reset)(Module(
+        new halfband_interpolator(
+            n=n, resolution=resolution,coeffs=halfband_BW_01125_N_6.H.map(_ * (math.pow(2,coeffres-1)-1)).map(_.toInt)
+        )
+    ))
+
+    val cic3reset = Wire(Bool())
+    cic3reset     :=reset.toBool
+    val cic3= withClockAndReset(io.clocks.hb3clock_high,cic3reset)(Module(
+        new cic3_interpolator(n=n,resolution=resolution,gainbits=gainbits)
+    ))
 
     //Default is to bypass
-    cic3.io.clockslow :=io.clocks.cic3clockslow
-    cic3.io.integscale:=io.controls.cic3integscale
-    hb1.io.clock_low  :=io.clocks.hb1clock_low
+    hb1.io.clock_high :=io.clocks.hb1clock_high
     hb1.io.scale      :=io.controls.hb1scale
-    hb2.io.clock_low  :=io.clocks.hb2clock_low
+    hb2.io.clock_high :=io.clocks.hb2clock_high
     hb2.io.scale      :=io.controls.hb2scale
-    hb3.io.clock_low  :=io.clocks.hb3clock_low
+    hb3.io.clock_high :=io.clocks.hb3clock_high
     hb3.io.scale      :=io.controls.hb3scale
-    cic3.io.iptr_A    :=io.iptr_A
-    hb1.io.iptr_A     :=cic3.io.Z
+    cic3.io.clockfast :=io.clocks.cic3clockfast
+    cic3.io.derivscale:=io.controls.cic3derivscale
+    hb1.io.iptr_A     :=io.iptr_A
     hb2.io.iptr_A     :=hb1.io.Z
     hb3.io.iptr_A     :=hb2.io.Z
+    cic3.io.iptr_A    :=hb3.io.Z
     io.Z              :=RegNext(io.iptr_A) 
     
     //Modes
@@ -103,39 +116,42 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
             io.Z             :=RegNext(io.iptr_A)
         }
         is(two) {
-            cic3reset        :=true.B 
-            hb1reset         :=true.B
+            hb1.io.iptr_A    :=io.iptr_A
+            hb1reset         :=reset.toBool
             hb2reset         :=true.B
-            hb3reset         :=reset.toBool
-            hb3.io.iptr_A    :=io.iptr_A
-            io.Z             :=hb3.io.Z
+            hb3reset         :=true.B
+            cic3reset        :=true.B 
+            io.Z             :=hb1.io.Z
         }
         is(four) {
-            cic3reset        :=true.B 
-            hb1reset         :=true.B
+            hb1.io.iptr_A    :=io.iptr_A
+            hb1reset         :=reset.toBool
             hb2reset         :=reset.toBool
-            hb3reset         :=reset.toBool
-            hb2.io.iptr_A    :=io.iptr_A
-            io.Z             :=hb3.io.Z
+            hb3reset         :=true.B
+            cic3reset        :=true.B 
+            hb2.io.iptr_A       :=hb1.io.Z
+            io.Z             :=hb2.io.Z
         }
         is(eight) {
-            cic3.reset       :=true.B
-            hb1.reset        :=reset.toBool 
-            hb2.reset        :=reset.toBool
-            hb3reset         :=reset.toBool
             hb1.io.iptr_A    :=io.iptr_A
-            io.Z             :=hb3.io.Z
-        }
-        is(more) {
-            cic3reset        :=reset.toBool 
             hb1reset         :=reset.toBool
             hb2reset         :=reset.toBool
             hb3reset         :=reset.toBool
-            cic3.io.iptr_A   :=io.iptr_A
-            hb1.io.iptr_A    :=cic3.io.Z
-            hb2.io.iptr_A    :=hb1.io.Z
-            hb3.io.iptr_A    :=hb2.io.Z
+            cic3reset        :=true.B 
+            hb2.io.iptr_A       :=hb1.io.Z
+            hb3.io.iptr_A       :=hb2.io.Z
             io.Z             :=hb3.io.Z
+        }
+        is(more) {
+            hb1.io.iptr_A    :=io.iptr_A
+            hb1reset         :=reset.toBool
+            hb2reset         :=reset.toBool
+            hb3reset         :=reset.toBool
+            cic3reset        :=reset.toBool
+            hb2.io.iptr_A       :=hb1.io.Z
+            hb3.io.iptr_A       :=hb2.io.Z
+            cic3.io.iptr_A      :=hb3.io.Z
+            io.Z             :=cic3.io.Z
         }
     }
 }
