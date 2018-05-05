@@ -129,7 +129,7 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
             hb2reset         :=reset.toBool
             hb3reset         :=true.B
             cic3reset        :=true.B 
-            hb2.io.iptr_A       :=hb1.io.Z
+            hb2.io.iptr_A    :=hb1.io.Z
             io.Z             :=hb2.io.Z
         }
         is(eight) {
@@ -138,8 +138,8 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
             hb2reset         :=reset.toBool
             hb3reset         :=reset.toBool
             cic3reset        :=true.B 
-            hb2.io.iptr_A       :=hb1.io.Z
-            hb3.io.iptr_A       :=hb2.io.Z
+            hb2.io.iptr_A    :=hb1.io.Z
+            hb3.io.iptr_A    :=hb2.io.Z
             io.Z             :=hb3.io.Z
         }
         is(more) {
@@ -148,9 +148,9 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
             hb2reset         :=reset.toBool
             hb3reset         :=reset.toBool
             cic3reset        :=reset.toBool
-            hb2.io.iptr_A       :=hb1.io.Z
-            hb3.io.iptr_A       :=hb2.io.Z
-            cic3.io.iptr_A      :=hb3.io.Z
+            hb2.io.iptr_A    :=hb1.io.Z
+            hb3.io.iptr_A    :=hb2.io.Z
+            cic3.io.iptr_A   :=hb3.io.Z
             io.Z             :=cic3.io.Z
         }
     }

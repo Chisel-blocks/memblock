@@ -116,7 +116,7 @@ class f2_rx_path (
        w_inselect:=adcdelay.optr_Z
     }
     
-    //Enabled read
+    //Enabled write
     when (io.adc_ioctrl.adc_lut_write_en===true.B) {
         adclut_real.write(io.adc_ioctrl.adc_lut_write_addr,io.adc_ioctrl.adc_lut_write_val.real)
         adclut_imag.write(io.adc_ioctrl.adc_lut_write_addr,io.adc_ioctrl.adc_lut_write_val.imag)
