@@ -12,11 +12,12 @@ import f2_decimator._
 import prog_delay._
 
 class rx_path_adc_ioctrl (
-        val inputn   : Int=9,
-        val n        : Int=16,
-        val users    : Int=4,
-        val progdelay: Int=64,
-        val finedelay: Int=32
+        val inputn    : Int=9,
+        val n         : Int=16,
+        val users     : Int=4,
+        val progdelay : Int=64,
+        val finedelay : Int=32,
+        val weightbits: Int=10
     ) extends Bundle {
         val adc_fifo_lut_mode  = UInt(3.W)
         val reset_adcfifo      = Bool()
@@ -24,6 +25,7 @@ class rx_path_adc_ioctrl (
         val adc_lut_write_val  = DspComplex(SInt(inputn.W), SInt(inputn.W))
         val adc_lut_write_en   = Bool()
         val user_delays        = Vec(users,UInt(log2Ceil(progdelay).W))
+        val user_weights       = Vec(users,DspComplex(SInt(weightbits.W),SInt(weightbits.W)))
         val fine_delays        = UInt(log2Ceil(finedelay).W)
 }
 
@@ -33,7 +35,8 @@ class f2_rx_path_io (
         val n         : Int=16,  
         val users     : Int=4,
         val progdelay : Int=64,
-        val finedelay : Int=32
+        val finedelay : Int=32,
+        val weightbits: Int=10
 
     ) extends Bundle {
     val decimator_clocks   = new f2_decimator_clocks()
@@ -51,7 +54,8 @@ class f2_rx_path (
         n         : Int=16, 
         users     : Int=4,
         progdelay : Int=64,
-        finedelay : Int=32
+        finedelay : Int=32,
+        weightbits: Int=10
     ) extends Module {
     val io = IO( new f2_rx_path_io(inputn=inputn,users=users,progdelay=progdelay))
   
@@ -138,13 +142,21 @@ class f2_rx_path (
     
     userdelay.map(_.iptr_A:=decimator.Z)
     (userdelay,io.adc_ioctrl.user_delays).zipped.map(_.select:=_)
-
+    
+    val weighted_users=withClock(io.decimator_clocks.hb3clock_low){
+        Reg(Vec(users,DspComplex(SInt(n.W), SInt(n.W))))
+    }
+    ( weighted_users, 
+        ( userdelay,io.adc_ioctrl.user_weights
+        ).zipped.map( _.optr_Z * _)
+    ).zipped.map(_:=_)
+ 
     when (io.decimator_controls.mode===0.U) {
         io.Z.map(_:=RegNext(decimator.Z))
     } .otherwise {
         //These are in the same clock domain if
         //the decimator in NOT bypassed
-        (io.Z,userdelay).zipped.map(_:=_.optr_Z)
+        (io.Z,weighted_users).zipped.map(_:=_)
     }
 }
 //This gives you verilog
