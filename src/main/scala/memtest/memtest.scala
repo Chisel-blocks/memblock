@@ -6,7 +6,7 @@ import chisel3.util._
 import chisel3.experimental._
 import dsptools._
 import dsptools.numbers._
-
+import f2_rx_dsp._
 class memtest (
         n                : Int=16,
         users            : Int=4,
@@ -15,7 +15,7 @@ class memtest (
     val io = IO( new Bundle { 
             val write_addr = Input(UInt(log2Ceil(memsize).W))
             val read_addr  = Input(UInt(log2Ceil(memsize).W))
-            val read_val   = Output(UInt(n.W)
+            val read_val   = Output(UInt(n.W))
             val write_val  = Input(UInt(n.W))
     } )
     // Need a memory with write from scan, read to scan, and 
