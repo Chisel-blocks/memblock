@@ -79,8 +79,8 @@ class f2_rx_path (
     adcdelay.select<>io.adc_ioctrl.fine_delays
 
     //ADC lookup tables
-    val adclut_real= Mem(scala.math.pow(2,9).toInt,SInt(inputn.W))
-    val adclut_imag= Mem(scala.math.pow(2,9).toInt,SInt(inputn.W))
+    val adclut_real= SyncReadMem(scala.math.pow(2,9).toInt,SInt(inputn.W))
+    val adclut_imag= SyncReadMem(scala.math.pow(2,9).toInt,SInt(inputn.W))
     val w_lutoutdata= RegInit(DspComplex.wire(0.S(inputn.W),0.S(inputn.W)))
     //val w_lutoutdata = Wire(DspComplex(SInt(inputn.W), SInt(inputn.W)))
     val w_lutreadaddress= RegInit(DspComplex.wire(0.S(inputn.W),0.S(inputn.W)))
