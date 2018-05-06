@@ -1,6 +1,6 @@
 // See LICENSE for license details.
 // Initially written by Marko Kosunen  20180429
-package memtest 
+package memblock 
 import chisel3._
 import chisel3.util._
 import chisel3.experimental._
@@ -47,8 +47,8 @@ class memblock (
    
 }
 //This gives you verilog
-object memtest extends App {
-  chisel3.Driver.execute(args, () => new memtest(n=16, memsize=scala.math.pow(2,13).toInt ))
+object memblock extends App {
+  chisel3.Driver.execute(args, () => new memblock(n=16, memsize=scala.math.pow(2,13).toInt ))
 }
 
 
