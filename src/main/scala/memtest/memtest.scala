@@ -15,18 +15,25 @@ class memtest (
     val io = IO( new Bundle { 
             val write_addr = Input(UInt(log2Ceil(memsize).W))
             val read_addr  = Input(UInt(log2Ceil(memsize).W))
-            val read_val   = Output(UInt(n.W))
-            val write_val  = Input(UInt(n.W))
+            val read_val   = Output(new iofifosigs(n=n))
+            val write_val  = Input(new iofifosigs(n=n))
     } )
     // Need a memory with write from scan, read to scan, and 
     // To map this to SRAM, write address must be syncroniozed
     // All addressing through write_addri, enables throuhg write_en
-    val mem      =SyncReadMem(memsize, UInt(n.W))
+    val userzero   = 0.U.asTypeOf(new usersigs(n=n,users=users))
+    val udatazero  = 0.U.asTypeOf(userzero.data)
+    val uindexzero = 0.U.asTypeOf(userzero.uindex)
+    val iofifozero = 0.U.asTypeOf(new iofifosigs(n=n))
+    val datazero   = 0.U.asTypeOf(iofifozero.data)
+    val rxindexzero= 0.U.asTypeOf(iofifozero.rxindex)
+
+    val mem =SyncReadMem(memsize, new iofifosigs(n=n))
     val write_addr =RegInit(0.U(log2Ceil(memsize).W))
     val read_addr =RegInit(0.U(log2Ceil(memsize).W))
     //val write_en =RegInit(Bool())
-    val write_val=RegInit(0.U(n.W))
-    val read_val =RegInit(0.U(n.W))
+    val write_val=RegInit(iofifozero)
+    val read_val =RegInit(iofifozero)
     write_addr:=io.write_addr
     write_val:=io.write_val
     read_addr:=io.read_addr
