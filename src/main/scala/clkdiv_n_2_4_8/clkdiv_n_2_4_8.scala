@@ -1,6 +1,6 @@
 // Clk divider. Initiallyl  written by Marko Kosunen
 // Divides input clock by N, 2N , 4N and 8N
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 30.04.2018 11:00
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 17.05.2018 18:45
 package clkdiv_n_2_4_8
 
 import chisel3.experimental._
@@ -13,6 +13,7 @@ class clkdiv_n_2_4_8 (n: Int=8) extends Module {
     val io = IO(new Bundle {
         val Ndiv       = Input(UInt(n.W))
         val reset_clk  = Input(Bool())
+        val shift      = Input(UInt(2.W))
         val clkpn      = Output(Bool())
         val clkp2n     = Output(Bool())
         val clkp4n     = Output(Bool())
@@ -21,10 +22,12 @@ class clkdiv_n_2_4_8 (n: Int=8) extends Module {
 
     val en  = Wire(Bool()) 
     en  := !io.reset_clk 
-
+    val r_shift=RegInit(0.U.asTypeOf(io.shift))
     val stateregisters=RegInit(VecInit(Seq.fill(4)(false.B)))
     val count=RegInit(0.U(n.W))
 
+    //Sync the shift
+    r_shift:=io.shift
     when ( en ) {
         when (count === io.Ndiv-1) {
             count:=0.U
@@ -63,9 +66,9 @@ class clkdiv_n_2_4_8 (n: Int=8) extends Module {
         allzp(i):= allzp(i-1) && !stateregisters(i)
         //allzp(i):= false.B
     }
-    val outregs=RegInit(VecInit(Seq.fill(4)(false.B)))
+    val outregs   =RegInit(VecInit(Seq.fill(4)(false.B)))
+    
     outregs(0):=stateregisters(0)
-
     for ( i <- 1 to 3) {
        when (en) { 
            when ( (enchain(i) && allzp(i-1)) ) {
@@ -80,14 +83,39 @@ class clkdiv_n_2_4_8 (n: Int=8) extends Module {
      outregs(i):=stateregisters(i)
     }
 
+    val w_clkpn=Wire(Bool())
     when ( io.Ndiv-1=== 0.U(n.W) ) {
-        io.clkpn := clock.asUInt
+        w_clkpn := clock.asUInt
     } .otherwise {
-        io.clkpn  := RegNext(outregs(0))
+        w_clkpn  := RegNext(RegNext(outregs(0)))
     }
-    io.clkp2n := outregs(1)
-    io.clkp4n := outregs(2)
-    io.clkp8n := outregs(3)
+    
+    when (r_shift===0.U) {
+        io.clkpn := w_clkpn
+        io.clkp2n:=RegNext(outregs(1)) 
+        io.clkp4n:=RegNext(outregs(2))
+        io.clkp8n:=RegNext(outregs(3))
+    } .elsewhen( r_shift===1.U) {
+        io.clkpn := clock.asUInt
+        io.clkp2n:= w_clkpn
+        io.clkp4n:=RegNext(outregs(1))
+        io.clkp8n:=RegNext(outregs(2))
+    } .elsewhen( r_shift===2.U) {
+        io.clkpn := clock.asUInt
+        io.clkp2n:= clock.asUInt
+        io.clkp4n:=w_clkpn
+        io.clkp8n:=RegNext(outregs(1))
+    } .elsewhen( r_shift===3.U) {
+        io.clkpn := clock.asUInt
+        io.clkp2n:= clock.asUInt
+        io.clkp4n:= clock.asUInt
+        io.clkp8n:= w_clkpn
+    } .otherwise {
+        io.clkpn := w_clkpn
+        io.clkp2n:=RegNext(outregs(1)) 
+        io.clkp4n:=RegNext(outregs(2))
+        io.clkp8n:=RegNext(outregs(3))
+    }
 }
 
 
