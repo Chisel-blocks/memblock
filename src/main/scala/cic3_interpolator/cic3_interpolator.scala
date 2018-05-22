@@ -38,19 +38,20 @@ class cic3_interpolator (n: Int=16, resolution: Int=28, gainbits: Int=10) extend
     }
     
     
-    withClock (io.clockfast){
-    //Integrators
-    val integregs  = RegInit(VecInit(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
-    for (i<- 0 to 3) {
-      if (i <=0){
-          integregs(i).real:=slowregs(3).real*io.derivscale
-          integregs(i).imag:=slowregs(3).imag*io.derivscale
-      } else { 
-          integregs(i):=integregs(i-1)+integregs(i)
+    val integregs = withClock (io.clockfast){
+      //Integrators
+      val integregs  = RegInit(VecInit(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
+      for (i<- 0 to 3) {
+        if (i <=0){
+            integregs(i).real:=slowregs(3).real*io.derivscale
+            integregs(i).imag:=slowregs(3).imag*io.derivscale
+        } else { 
+            integregs(i):=integregs(i-1)+integregs(i)
+        }
       }
-    }
-        io.Z.real := RegNext(slowregs(3).real(resolution-1,resolution-n).asSInt)
-        io.Z.imag := RegNext(slowregs(3).imag(resolution-1,resolution-n).asSInt)
+      io.Z.real := RegNext(integregs(3).real(resolution-1,resolution-n).asSInt)
+      io.Z.imag := RegNext(integregs(3).imag(resolution-1,resolution-n).asSInt)
+      integregs
     }
 }
 //This is the object to provide verilog
