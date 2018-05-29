@@ -3,7 +3,7 @@
 // greater than eight
 //
 // Intially written by Marko Kosunen 20180503
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 03.05.2018 16:02
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 24.05.2018 16:33
 package cic3_interpolator
 
 import chisel3.experimental._
@@ -37,20 +37,18 @@ class cic3_interpolator (n: Int=16, resolution: Int=28, gainbits: Int=10) extend
       }
     }
     
-    
-    withClock (io.clockfast){
-    //Integrators
-    val integregs  = RegInit(VecInit(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works
-    for (i<- 0 to 3) {
-      if (i <=0){
-          integregs(i).real:=slowregs(3).real*io.derivscale
-          integregs(i).imag:=slowregs(3).imag*io.derivscale
-      } else { 
-          integregs(i):=integregs(i-1)+integregs(i)
+     withClock (io.clockfast){
+     val integregs  = RegInit(VecInit(Seq.fill(4)(DspComplex.wire(0.S(resolution.W), 0.S(resolution.W))))) //works }
+      for (i<- 0 to 3) {
+        if (i <=0){
+            integregs(i).real:=slowregs(3).real*io.derivscale
+            integregs(i).imag:=slowregs(3).imag*io.derivscale
+        } else { 
+            integregs(i):=integregs(i-1)+integregs(i)
+        }
       }
-    }
-        io.Z.real := RegNext(slowregs(3).real(resolution-1,resolution-n).asSInt)
-        io.Z.imag := RegNext(slowregs(3).imag(resolution-1,resolution-n).asSInt)
+      io.Z.real := RegNext(integregs(3).real(resolution-1,resolution-n).asSInt)
+      io.Z.imag := RegNext(integregs(3).imag(resolution-1,resolution-n).asSInt)
     }
 }
 //This is the object to provide verilog

@@ -14,6 +14,7 @@ import cic3_interpolator._
 
 class f2_interpolator_clocks extends Bundle {
         val cic3clockfast   = Input(Clock())
+        val hb1clock_low    = Input(Clock())
         val hb1clock_high    = Input(Clock())
         val hb2clock_high    = Input(Clock())
         val hb3clock_high    = Input(Clock())
@@ -21,6 +22,7 @@ class f2_interpolator_clocks extends Bundle {
 
 class f2_interpolator_controls(val gainbits: Int) extends Bundle {
         val cic3derivscale  = Input(UInt(gainbits.W))
+        val reset_loop      = Input(Bool())
         val hb1scale        = Input(UInt(gainbits.W))
         val hb2scale        = Input(UInt(gainbits.W))
         val hb3scale        = Input(UInt(gainbits.W))
@@ -41,7 +43,7 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
     //State definitions
     val bypass :: two :: four :: eight :: more :: Nil = Enum(5)
     //Select state
-    val state=RegInit(bypass)
+    val state=withClock(io.clocks.hb1clock_low) (RegInit(bypass))
     
     //Decoder for the modes
     when(io.controls.mode===0.U){
@@ -62,7 +64,7 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
     //Reset initializations
     val hb1reset = Wire(Bool())
     hb1reset    :=reset.toBool
-    val hb1 = withClockAndReset(clock,hb1reset)(Module( 
+    val hb1 = withClockAndReset(io.clocks.hb1clock_low,hb1reset)(Module( 
         new halfband_interpolator( 
             n=n, resolution=resolution,coeffs=halfband_BW_045_N_40.H.map(_ * (math.pow(2,coeffres-1)-1)).map(_.toInt)
         )
@@ -86,7 +88,7 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
     ))
 
     val cic3reset = Wire(Bool())
-    cic3reset     :=reset.toBool
+    cic3reset     :=io.controls.reset_loop
     val cic3= withClockAndReset(io.clocks.hb3clock_high,cic3reset)(Module(
         new cic3_interpolator(n=n,resolution=resolution,gainbits=gainbits)
     ))
@@ -104,7 +106,7 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
     hb2.io.iptr_A     :=hb1.io.Z
     hb3.io.iptr_A     :=hb2.io.Z
     cic3.io.iptr_A    :=hb3.io.Z
-    io.Z              :=RegNext(io.iptr_A) 
+    io.Z              :=withClock(io.clocks.hb1clock_low) (RegNext(io.iptr_A)) 
     
     //Modes
     switch(state) {
@@ -113,7 +115,7 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
             hb1reset         :=true.B
             hb2reset         :=true.B
             hb3reset         :=true.B
-            io.Z             :=RegNext(io.iptr_A)
+            io.Z             :=withClock(io.clocks.hb1clock_low) (RegNext(io.iptr_A))
         }
         is(two) {
             hb1.io.iptr_A    :=io.iptr_A
@@ -137,7 +139,7 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
             hb1reset         :=reset.toBool
             hb2reset         :=reset.toBool
             hb3reset         :=reset.toBool
-            cic3reset        :=true.B 
+            cic3reset        :=io.controls.reset_loop 
             hb2.io.iptr_A    :=hb1.io.Z
             hb3.io.iptr_A    :=hb2.io.Z
             io.Z             :=hb3.io.Z
@@ -147,7 +149,7 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
             hb1reset         :=reset.toBool
             hb2reset         :=reset.toBool
             hb3reset         :=reset.toBool
-            cic3reset        :=reset.toBool
+            cic3reset        :=io.controls.reset_loop
             hb2.io.iptr_A    :=hb1.io.Z
             hb3.io.iptr_A    :=hb2.io.Z
             cic3.io.iptr_A   :=hb3.io.Z
