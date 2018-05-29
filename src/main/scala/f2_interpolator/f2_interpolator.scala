@@ -22,6 +22,7 @@ class f2_interpolator_clocks extends Bundle {
 
 class f2_interpolator_controls(val gainbits: Int) extends Bundle {
         val cic3derivscale  = Input(UInt(gainbits.W))
+        val reset_loop      = Input(Bool())
         val hb1scale        = Input(UInt(gainbits.W))
         val hb2scale        = Input(UInt(gainbits.W))
         val hb3scale        = Input(UInt(gainbits.W))
@@ -87,7 +88,7 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
     ))
 
     val cic3reset = Wire(Bool())
-    cic3reset     :=reset.toBool
+    cic3reset     :=io.controls.reset_loop
     val cic3= withClockAndReset(io.clocks.hb3clock_high,cic3reset)(Module(
         new cic3_interpolator(n=n,resolution=resolution,gainbits=gainbits)
     ))
@@ -138,7 +139,7 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
             hb1reset         :=reset.toBool
             hb2reset         :=reset.toBool
             hb3reset         :=reset.toBool
-            cic3reset        :=true.B 
+            cic3reset        :=io.controls.reset_loop 
             hb2.io.iptr_A    :=hb1.io.Z
             hb3.io.iptr_A    :=hb2.io.Z
             io.Z             :=hb3.io.Z
@@ -148,7 +149,7 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
             hb1reset         :=reset.toBool
             hb2reset         :=reset.toBool
             hb3reset         :=reset.toBool
-            cic3reset        :=reset.toBool
+            cic3reset        :=io.controls.reset_loop
             hb2.io.iptr_A    :=hb1.io.Z
             hb3.io.iptr_A    :=hb2.io.Z
             cic3.io.iptr_A   :=hb3.io.Z
