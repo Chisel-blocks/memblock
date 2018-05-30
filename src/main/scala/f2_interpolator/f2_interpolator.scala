@@ -20,8 +20,9 @@ class f2_interpolator_clocks extends Bundle {
         val hb3clock_high    = Input(Clock())
 }
 
-class f2_interpolator_controls(val gainbits: Int) extends Bundle {
+class f2_interpolator_controls(val resolution : Int, val gainbits: Int) extends Bundle {
         val cic3derivscale  = Input(UInt(gainbits.W))
+        val cic3derivshift  = Input(UInt(log2Ceil(resolution).W))
         val reset_loop      = Input(Bool())
         val hb1scale        = Input(UInt(gainbits.W))
         val hb2scale        = Input(UInt(gainbits.W))
@@ -29,15 +30,15 @@ class f2_interpolator_controls(val gainbits: Int) extends Bundle {
         val mode            = Input(UInt(3.W))
 }
 
-class f2_interpolator_io(val n: Int, val gainbits: Int) extends Bundle {
+class f2_interpolator_io(val n: Int, val resolution: Int, val gainbits: Int) extends Bundle {
         val clocks          = new f2_interpolator_clocks
-        val controls        = new f2_interpolator_controls(gainbits=gainbits)
+        val controls        = new f2_interpolator_controls(resolution=resolution,gainbits=gainbits)
         val iptr_A          = Input(DspComplex(SInt(n.W), SInt(n.W)))
         val Z               = Output(DspComplex(SInt(n.W), SInt(n.W)))
 }
 
 class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits: Int=10) extends Module {
-    val io = IO(new f2_interpolator_io(n=n,gainbits=gainbits)
+    val io = IO(new f2_interpolator_io(n=n,resolution=resolution,gainbits=gainbits)
     )
 
     //State definitions
@@ -102,6 +103,7 @@ class f2_interpolator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits
     hb3.io.scale      :=io.controls.hb3scale
     cic3.io.clockfast :=io.clocks.cic3clockfast
     cic3.io.derivscale:=io.controls.cic3derivscale
+    cic3.io.derivshift:=io.controls.cic3derivshift
     hb1.io.iptr_A     :=io.iptr_A
     hb2.io.iptr_A     :=hb1.io.Z
     hb3.io.iptr_A     :=hb2.io.Z
