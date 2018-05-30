@@ -3,7 +3,7 @@
 // greater than eight
 //
 // Intially written by Marko Kosunen 20180503
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 24.05.2018 16:33
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 29.05.2018 18:36
 package cic3_interpolator
 
 import chisel3.experimental._
