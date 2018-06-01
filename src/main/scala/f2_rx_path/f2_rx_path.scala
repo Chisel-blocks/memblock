@@ -20,6 +20,7 @@ class rx_path_adc_ioctrl (
         val weightbits: Int=10
     ) extends Bundle {
         val adc_fifo_lut_mode  = UInt(3.W)
+        val inv_adc_clk_pol = Bool()
         val reset_adcfifo      = Bool()
         val adc_lut_write_addr = UInt(inputn.W)
         val adc_lut_write_val  = DspComplex(SInt(inputn.W), SInt(inputn.W))
@@ -58,11 +59,27 @@ class f2_rx_path (
         weightbits: Int=10
     ) extends Module {
     val io = IO( new f2_rx_path_io(inputn=inputn,users=users,progdelay=progdelay))
-  
+    val adcproto=DspComplex(SInt(n.W),SInt(n.W))  
+    val iclk=Wire(Bool())
+    iclk := !io.adc_clock.asUInt
+    val invclk = iclk.asClock 
+
+    val inreg=withClock(io.adc_clock){RegInit(0.U.asTypeOf(adcproto))}
+    val inreg_inv=withClock(invclk){RegInit(0.U.asTypeOf(adcproto))}
+    inreg:=io.iptr_A
+    inreg_inv:=io.iptr_A
+    val synced = Wire(adcproto)
+    when (io.adc_ioctrl.inv_adc_clk_pol === false.B ) {
+        synced:=inreg
+    }.elsewhen ( io.adc_ioctrl.inv_adc_clk_pol === true.B){ 
+        synced:=inreg_inv
+    }.otherwise{
+        synced:=inreg
+    }
+
     val decimator  = Module ( new  f2_decimator (n=n, resolution=32, coeffres=16, gainbits=10)).io
     io.decimator_controls<>decimator.controls
     io.decimator_clocks<>decimator.clocks
-    val adcproto=DspComplex(SInt(n.W),SInt(n.W))  
     val adcfifodepth=16
     val adcfifo = Module (new AsyncQueue(adcproto,depth=adcfifodepth)).io
     adcfifo.enq_clock:=io.adc_clock
@@ -90,33 +107,33 @@ class f2_rx_path (
 
     when (io.adc_ioctrl.adc_fifo_lut_mode===0.U) {
         //Bypass FIFO and LUT
-        w_inselect:=io.iptr_A
-        adcfifo.enq.bits:= io.iptr_A
+        w_inselect:=synced
+        adcfifo.enq.bits:= synced
         w_lutreadaddress.real:= io.adc_ioctrl.adc_lut_write_addr.asSInt
         w_lutreadaddress.imag:= io.adc_ioctrl.adc_lut_write_addr.asSInt
     } .elsewhen (io.adc_ioctrl.adc_fifo_lut_mode===1.U) {
         //LUT bypassed, FIFO active
-        adcfifo.enq.bits:=io.iptr_A
+        adcfifo.enq.bits:=synced
         w_inselect:=adcdelay.optr_Z
     } .elsewhen (io.adc_ioctrl.adc_fifo_lut_mode===2.U) {
        //FIFO active, LUt active
-       adcfifo.enq.bits:=io.iptr_A
+       adcfifo.enq.bits:=synced
        w_lutreadaddress:=adcdelay.optr_Z
        w_inselect:=w_lutoutdata
     } .elsewhen (io.adc_ioctrl.adc_fifo_lut_mode===3.U) {
        //FIFO active, LUT active, LUT first
        //Sync problem assumed
-       w_lutreadaddress:=io.iptr_A
+       w_lutreadaddress:=synced
        adcfifo.enq.bits:=w_lutoutdata
        w_inselect:=adcdelay.optr_Z
     } .elsewhen (io.adc_ioctrl.adc_fifo_lut_mode===4.U) {
        //LUT active, FIFO bypassed
        //Sync problem assumed
-       adcfifo.enq.bits:= io.iptr_A
-       w_lutreadaddress:=io.iptr_A
+       adcfifo.enq.bits:= synced
+       w_lutreadaddress:=synced
        w_inselect:=w_lutoutdata
     } .otherwise {
-       adcfifo.enq.bits:= io.iptr_A
+       adcfifo.enq.bits:= synced
        w_inselect:=adcdelay.optr_Z
     }
     
