@@ -60,10 +60,10 @@ class halfband_interpolator (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq
         //Slow clock sampled with fast one to control the ouput multiplexer
         val clkreg=Wire(Bool())
         clkreg:=RegNext(clock.asUInt)
-        when (clkreg===false.B) { 
+        when (clkreg===true.B) { 
             outreg.real := (subfil1.real*io.scale)(resolution-1,resolution-n).asSInt
             outreg.imag := (subfil1.imag*io.scale)(resolution-1,resolution-n).asSInt
-        }.elsewhen (clkreg===true.B) { 
+        }.elsewhen (clkreg===false.B) { 
             outreg.real := (subfil2.real*io.scale)(resolution-1,resolution-n).asSInt
             outreg.imag := (subfil2.imag*io.scale)(resolution-1,resolution-n).asSInt
         }
