@@ -25,6 +25,7 @@ class rx_path_adc_ioctrl (
         val adc_lut_write_addr = UInt(inputn.W)
         val adc_lut_write_val  = DspComplex(SInt(inputn.W), SInt(inputn.W))
         val adc_lut_write_en   = Bool()
+        val adc_lut_reset      = Bool()
         val user_delays        = Vec(users,UInt(log2Ceil(progdelay).W))
         val user_weights       = Vec(users,DspComplex(SInt(weightbits.W),SInt(weightbits.W)))
         val fine_delays        = UInt(log2Ceil(finedelay).W)
@@ -98,8 +99,7 @@ class f2_rx_path (
     //ADC lookup tables
     val adclut_real= SyncReadMem(scala.math.pow(2,9).toInt,SInt(inputn.W))
     val adclut_imag= SyncReadMem(scala.math.pow(2,9).toInt,SInt(inputn.W))
-    val w_lutoutdata= RegInit(DspComplex.wire(0.S(inputn.W),0.S(inputn.W)))
-    //val w_lutoutdata = Wire(DspComplex(SInt(inputn.W), SInt(inputn.W)))
+    val w_lutoutdata= withReset(io.adc_ioctrl.adc_lut_reset){RegInit(DspComplex.wire(0.S(inputn.W),0.S(inputn.W)))}
     val w_lutreadaddress= RegInit(DspComplex.wire(0.S(inputn.W),0.S(inputn.W)))
 
     //Input selection wire
