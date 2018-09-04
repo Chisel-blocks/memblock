@@ -19,8 +19,10 @@ class f2_decimator_clocks extends Bundle {
         val hb3clock_low    = Input(Clock())
 }
 
-class f2_decimator_controls(val gainbits: Int) extends Bundle {
+class f2_decimator_controls(val resolution: Int, val gainbits: Int) extends Bundle {
         val cic3integscale  = Input(UInt(gainbits.W))
+        val cic3integshift  = Input(UInt(log2Ceil(resolution).W))
+        val reset_loop      = Input(Bool())
         val hb1scale        = Input(UInt(gainbits.W))
         val hb2scale        = Input(UInt(gainbits.W))
         val hb3scale        = Input(UInt(gainbits.W))
@@ -28,16 +30,16 @@ class f2_decimator_controls(val gainbits: Int) extends Bundle {
         //override def cloneType = (new f2_decimator_controls(gainbits)).asInstanceOf[this.type]
 }
 
-class f2_decimator_io(n: Int, gainbits: Int) extends Bundle {
+class f2_decimator_io(n: Int, resolution: Int, gainbits: Int) extends Bundle {
         val clocks          = new f2_decimator_clocks
-        val controls        = new f2_decimator_controls(gainbits=gainbits)
+        val controls        = new f2_decimator_controls(resolution=resolution,gainbits=gainbits)
         val iptr_A          = Input(DspComplex(SInt(n.W), SInt(n.W)))
         val Z               = Output(DspComplex(SInt(n.W), SInt(n.W)))
-        override def cloneType = (new f2_decimator_io(n,gainbits)).asInstanceOf[this.type]
+        override def cloneType = (new f2_decimator_io(n,resolution,gainbits)).asInstanceOf[this.type]
 }
 
 class f2_decimator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits: Int=10) extends Module {
-    val io = IO(new f2_decimator_io(n=n,gainbits=gainbits)
+    val io = IO(new f2_decimator_io(n=n,resolution=resolution,gainbits=gainbits)
     )
 
     //State definitions
@@ -63,7 +65,7 @@ class f2_decimator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits: I
     
     //Reset initializations
     val cic3reset = Wire(Bool())
-    cic3reset     :=reset.toBool
+    cic3reset     :=reset.toBool()
     val cic3= withClockAndReset(clock,cic3reset)(Module( new cic3(n=n,resolution=resolution,gainbits=gainbits)))
 
     val hb1reset = Wire(Bool())
@@ -81,6 +83,7 @@ class f2_decimator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits: I
     //Default is to bypass
     cic3.io.clockslow :=io.clocks.cic3clockslow
     cic3.io.integscale:=io.controls.cic3integscale
+    cic3.io.integshift:=io.controls.cic3integshift
     hb1.io.clock_low  :=io.clocks.hb1clock_low
     hb1.io.scale      :=io.controls.hb1scale
     hb2.io.clock_low  :=io.clocks.hb2clock_low
@@ -127,7 +130,7 @@ class f2_decimator (n: Int=16, resolution: Int=32, coeffres: Int=16, gainbits: I
             io.Z             :=hb3.io.Z
         }
         is(more) {
-            cic3reset        :=reset.toBool 
+            cic3reset        :=io.controls.reset_loop 
             hb1reset         :=reset.toBool
             hb2reset         :=reset.toBool
             hb3reset         :=reset.toBool

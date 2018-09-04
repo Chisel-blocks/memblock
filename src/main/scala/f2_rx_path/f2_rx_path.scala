@@ -35,6 +35,7 @@ class rx_path_adc_ioctrl (
 class f2_rx_path_io (
         val inputn    : Int=9, 
         val n         : Int=16,  
+        val resolution: Int=32,  
         val users     : Int=4,
         val progdelay : Int=64,
         val finedelay : Int=32,
@@ -42,7 +43,7 @@ class f2_rx_path_io (
 
     ) extends Bundle {
     val decimator_clocks   = new f2_decimator_clocks()
-    val decimator_controls = new f2_decimator_controls(gainbits=10)
+    val decimator_controls = new f2_decimator_controls(resolution=resolution,gainbits=10)
     val adc_clock          = Input(Clock())
     val adc_ioctrl         = Input(new rx_path_adc_ioctrl(inputn=inputn, n=n,
                                         users=users,progdelay=progdelay,
@@ -54,6 +55,7 @@ class f2_rx_path_io (
 class f2_rx_path (
         inputn: Int=9, 
         n         : Int=16, 
+        resolution: Int=32, 
         users     : Int=4,
         progdelay : Int=64,
         finedelay : Int=32,
@@ -78,7 +80,7 @@ class f2_rx_path (
         synced:=inreg
     }
 
-    val decimator  = Module ( new  f2_decimator (n=n, resolution=32, coeffres=16, gainbits=10)).io
+    val decimator  = Module ( new  f2_decimator (n=n, resolution=resolution, coeffres=16, gainbits=10)).io
     io.decimator_controls<>decimator.controls
     io.decimator_clocks<>decimator.clocks
     val adcfifodepth=16
