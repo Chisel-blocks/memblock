@@ -1,6 +1,6 @@
 // Clk divider. Initiallyl  written by Marko Kosunen
 // Divides input clock by N, 2N , 4N and 8N
-// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 17.05.2018 18:45
+// Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 31.10.2018 13:49
 package clkdiv_n_2_4_8
 
 import chisel3.experimental._
@@ -23,13 +23,17 @@ class clkdiv_n_2_4_8 (n: Int=8) extends Module {
     val en  = Wire(Bool()) 
     en  := !io.reset_clk 
     val r_shift=RegInit(0.U.asTypeOf(io.shift))
+    val r_Ndiv=RegInit(0.U.asTypeOf(io.shift))
     val stateregisters=RegInit(VecInit(Seq.fill(4)(false.B)))
     val count=RegInit(0.U(n.W))
 
     //Sync the shift
     r_shift:=io.shift
+    //Sync the Ndiv
+    r_Ndiv:=io.Ndiv
+
     when ( en ) {
-        when (count === io.Ndiv-1) {
+        when (count === r_Ndiv-1) {
             count:=0.U
             stateregisters(0) := true.B
         } .otherwise {
@@ -83,38 +87,77 @@ class clkdiv_n_2_4_8 (n: Int=8) extends Module {
      outregs(i):=stateregisters(i)
     }
 
-    val w_clkpn=Wire(Bool())
-    when ( io.Ndiv-1=== 0.U(n.W) ) {
-        w_clkpn := clock.asUInt
-    } .otherwise {
-        w_clkpn  := RegNext(RegNext(outregs(0)))
-    }
+    // Output selection logic
+    val w_isdivone=Wire(Bool())
+    w_isdivone := ( r_Ndiv-1 ===0.U )
     
-    when (r_shift===0.U) {
-        io.clkpn := w_clkpn
-        io.clkp2n:=RegNext(outregs(1)) 
-        io.clkp4n:=RegNext(outregs(2))
-        io.clkp8n:=RegNext(outregs(3))
-    } .elsewhen( r_shift===1.U) {
-        io.clkpn := clock.asUInt
-        io.clkp2n:= w_clkpn
-        io.clkp4n:=RegNext(outregs(1))
-        io.clkp8n:=RegNext(outregs(2))
-    } .elsewhen( r_shift===2.U) {
-        io.clkpn := clock.asUInt
-        io.clkp2n:= clock.asUInt
-        io.clkp4n:=w_clkpn
-        io.clkp8n:=RegNext(outregs(1))
-    } .elsewhen( r_shift===3.U) {
-        io.clkpn := clock.asUInt
-        io.clkp2n:= clock.asUInt
-        io.clkp4n:= clock.asUInt
-        io.clkp8n:= w_clkpn
+    //First we sync or zero the divided clocks depending on the shift 
+    val syncregs=RegInit(VecInit(Seq.fill(4)(false.B)))
+    val w_clkpn=Wire(Bool())
+    val w_sel_clock_clkpn=Wire(Bool())
+    val w_sel_clock_clkp2n=Wire(Bool())
+    val w_sel_clock_clkp4n=Wire(Bool())
+    val w_sel_clock_clkp8n=Wire(Bool())
+    
+    //Shifting mux
+    w_clkpn  := RegNext(outregs(0))
+    when ( r_shift===0.U) {
+        syncregs(0):= w_clkpn
+        syncregs(1):=outregs(1) 
+        syncregs(2):=outregs(2)
+        syncregs(3):=outregs(3)
+    } .elsewhen( r_shift-1===0.U) {
+        syncregs(0):= 0.U;
+        syncregs(1):=w_clkpn 
+        syncregs(2):=outregs(1)
+        syncregs(3):=outregs(2)
+    } .elsewhen( r_shift-2===0.U) {
+        syncregs(0):= 0.U
+        syncregs(1):= 0.U
+        syncregs(2):= w_clkpn
+        syncregs(3):=outregs(1)
+    } .elsewhen( r_shift-3===0.U) {
+        syncregs(0):= 0.U
+        syncregs(1):= 0.U 
+        syncregs(2):= 0.U
+        syncregs(3):= w_clkpn
     } .otherwise {
-        io.clkpn := w_clkpn
-        io.clkp2n:=RegNext(outregs(1)) 
-        io.clkp4n:=RegNext(outregs(2))
-        io.clkp8n:=RegNext(outregs(3))
+        syncregs(0):= w_clkpn
+        syncregs(1):=outregs(1) 
+        syncregs(2):=outregs(2)
+        syncregs(3):=outregs(3)
+    }
+
+    //Selector signals for the output mux
+    w_sel_clock_clkpn := w_isdivone && ((r_shift===0.U) || (r_shift-1===0.U) || (r_shift-2===0.U) || (r_shift-3===0.U))
+    w_sel_clock_clkp2n:= w_isdivone && ((r_shift-1===0.U) || (r_shift-2===0.U) || (r_shift-3===0.U))
+    w_sel_clock_clkp4n:= w_isdivone && ((r_shift-2===0.U) || (r_shift-3===0.U))
+    w_sel_clock_clkp8n:= w_isdivone && ((r_shift-3===0.U))
+    
+    // Output Muxes
+    //Mux for clkpn
+    when (w_sel_clock_clkpn) {
+            io.clkpn :=clock.asUInt
+        } .otherwise {
+            io.clkpn :=syncregs(0)
+    }
+    //Mux for clkp2n
+    when (w_sel_clock_clkp2n) {
+            io.clkp2n :=clock.asUInt
+        } .otherwise {
+            io.clkp2n :=syncregs(1)
+    }
+    //Mux for clkp4n
+    when (w_sel_clock_clkp4n) {
+            io.clkp4n :=clock.asUInt
+        } .otherwise {
+            io.clkp4n :=syncregs(2)
+    }
+    //Mux for clkp8n
+    when (w_sel_clock_clkp8n) {
+            io.clkp8n :=clock.asUInt
+        } .otherwise {
+            io.clkp8n :=syncregs(3)
     }
 }
 
