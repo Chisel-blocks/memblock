@@ -31,6 +31,7 @@ class f2_lane_switch_io(
 
 class f2_lane_switch (
         n         : Int =16, 
+        users     : Int=4,
         todspios  : Int=4,
         fromdspios: Int=1,
         serdesios : Int=6 
@@ -39,13 +40,14 @@ class f2_lane_switch (
     val io = IO( 
         new f2_lane_switch_io(
             n=n,
+            users=users,
             fromdspios=fromdspios,
             todspios=todspios,
             serdesios=serdesios
         )
     )
     //Zeros
-    val iofifozero = 0.U.asTypeOf(new iofifosigs(n=n))
+    val iofifozero = 0.U.asTypeOf(new iofifosigs(n=n,users=users))
    
     //Defaults
     io.from_serdes_scan.map(_.ready:=false.B)
