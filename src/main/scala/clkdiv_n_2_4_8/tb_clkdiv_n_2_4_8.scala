@@ -14,78 +14,114 @@ object tb_clkdiv_n_2_4_8 {
   def main(args: Array[String]): Unit = {
     val name= this.getClass.getSimpleName.split("\\$").last
     val tb = new BufferedWriter(new FileWriter("./verilog/"+name+".v"))
+    // This is insane
+    // This must be done by a method processing direction-name-width tuples
     object tbvars {
-      val oname=name
-      val dutmod = "clkdiv_n_2_4_8" 
-      val n = 8
-      val sig0 = "Ndiv"
-      val sig1 = "reset_clk"
-      val sig2 = "clkpn"
-      val sig3 = "clkp2n"
-      val sig4 = "clkp4n"
-      val sig5 = "clkp8n"
-      val sig0limit = n-1
-    }
-    //simple template that uses handlebars to input buswidth definition
-    val textTemplate="""//This is a tesbench generated with scala generator
-                    |//Things you want to control from the simulator cmdline must be parameters
-                    |module {{oname}} #( parameter g_Rs_high  = 16*8*20.0e6
-                    |                      );
+        val oname=name
+        val dutmod = "clkdiv_n_2_4_8" 
+        val n = 8
+
+        val paramseq=Seq(("g_Rs_high","16*8*20.0e6"),
+                      ("g_Ndiv","16"),
+                      ("g_shift","0"))
+
+       //(type,name,upperlimit,lowerlimit, assign,init)    
+       //("None","None","None","None","None","None")
+       val ioseq=Seq(("clock","clock","None","None","None","None"),
+                     ("reset","reset","None","None","None",1),
+                     ("in","io_reset_clk",0,0,"None",1),
+                     ("in","io_Ndiv",n-1,0,"None","g_Ndiv"),
+                     ("in","io_shift",1,0,"None","g_shift"),
+                     ("out","io_clkpn","None","None","None","None"),
+                     ("out","io_clkp2n","None","None","None","None"),
+                     ("out","io_clkp4n","None","None","None","None"),
+                     ("out","io_clkp8n","None","None","None","None")
+                     )
+   }
+    val header="//This is a tesbench generated with scala generator\n"
+    var extpars="""//Things you want to control from the simulator cmdline must be parameters %nmodule %s #(""".format(tbvars.oname)+
+                   tbvars.paramseq.map{ 
+                       case (par,value) => "parameter %s = %s,\n            ".format(par,value)
+                   }.mkString
+    extpars=extpars.patch(extpars.lastIndexOf(','),"",1)+");"
+    var dutdef="""//DUT definition%n    %s DUT (""".format(tbvars.dutmod)+
+                 tbvars.ioseq.map{ 
+                     case ("reg",name,ul,dl,assingn,init)  => ""
+                     case ("wire",name,ul,dl,assingn,init)  => ""
+                     case ("reset"|"clock",name,ul,dl,assign,init)  => ".%s(%s),\n    ".format(name,name)
+                     case (dir,name,ul,dl,assign,init) => ".%s(%s),\n    ".format(name,name)
+                     case _ => ""
+                 }.mkString
+    dutdef=dutdef.patch(dutdef.lastIndexOf(','),"",1)+");"
+ 
+    val regdef="""//Registers for inputs %n""".format() +
+                 tbvars.ioseq.map{ 
+                     case ("clock",name,ul,dl,assign,init)  => "reg %s;\n".format(name)
+                     case ("reset",name,ul,dl,assign,init) => "reg %s;\n".format(name)
+                     case ("in"|"reg",name,"None","None",assign,init) => "reg %s;\n".format(name)
+                     case ("in"|"reg",name,ul,dl,assign,init) => "reg [%s:%s] %s;\n".format(ul,dl,name)
+                     case ("ins"|"regs",name,ul,dl,assign,init) => "reg signed [%s:%s] %s;\n".format(ul,dl,name)
+                     case _ => ""
+                 }.mkString
+ 
+    val wiredef="""//Wires for outputs %n""".format() +
+                 tbvars.ioseq.map{ 
+                     case ("dclk"|"out"|"wire",name,"None","None",assign,init) => "wire %s;\n".format(name)
+                     case ("out"|"wire",name,ul,dl,assign,init) => "wire [%s:%s] %s;\n".format(ul,dl,name)
+                     case ("outs"|"wires",name,ul,dl,assign,init) => "wire signed [%s:%s] %s;\n".format(ul,dl,name)
+                     case _ => ""
+                 }.mkString
+ 
+    val assdef="""//Assignments %n""".format()+
+                 tbvars.ioseq.map{ 
+                     case ("dclk"|"out"|"in",name,ul,dl,"None",init) => ""
+                     case ("dclk"|"out"|"in",name,ul,dl,"clock",init) => "assign %s=clock;\n".format(name)
+                     case ("dclk"|"out"|"in",name,ul,dl,"reset",init) => "assign %s=reset;\n".format(name)
+                     case ("dclk"|"out"|"in",name,ul,dl,assign,init) => "assign %s=%s;\n".format(name,assign)
+                     case _ => ""
+                 }.mkString
+ 
+    val initialdef="""%n%n//Initial values %ninitial #0 begin%n""".format()+
+                 tbvars.ioseq.map{ 
+                     case ( dir,name,ul,dl,assign,"None") => ""
+                     case ("reset",name,ul,dl,assign,init) => "    %s=%s;\n".format(name,init)
+                     case ("reset" | "in" | "wire" | "reg" |"wires" | "regs" ,name,ul,dl,assign,init) => "    %s=%s;\n".format(name,init)
+                     case _ => ""
+                 }.mkString
+                 
+ 
+ 
+    val textTemplate=header+ extpars+"""
                     |//timescale 1ps this should probably be a global model parameter 
                     |parameter integer c_Ts=1/(g_Rs_high*1e-12);
-                    |parameter RESET_TIME = 50*c_Ts;
-                    |parameter SIM_TIME = 1024*c_Ts;
+                    |parameter RESET_TIME = 16*c_Ts;
                     |
-                    |//These registers always needed
-                    |reg clock;
-                    |reg reset;
-                    |
-                    |//Registers for additional clocks
-                    |
-                    |//Registers for inputs
-                    |reg [{{sig0limit}}:0] io_{{sig0}};
-                    |reg io_{{sig1}};
-                    |
-                    |//Resisters for outputs
-                    |
+                    |""".stripMargin('|')+regdef+wiredef+assdef+
+                    """|
                     |//File IO parameters
                     |
                     |//Initializations
                     |initial clock = 1'b0;
                     |initial reset = 1'b0;
-                    |initial io_{{sig1}} = 1'b0;
                     |
                     |//Clock definitions
                     |always #(c_Ts)clock = !clock ;
                     |
-                    |//DUT definition
-                    |{{dutmod}} DUT ( 
-                    |    .clock(clock),
-                    |    .reset(reset),
-                    |    .io_{{sig0}}(io_{{sig0}}), 
-                    |    .io_{{sig1}}(io_{{sig1}}), 
-                    |    .io_{{sig2}}(io_{{sig2}}), 
-                    |    .io_{{sig3}}(io_{{sig3}}), 
-                    |    .io_{{sig4}}(io_{{sig4}}), 
-                    |    .io_{{sig5}}(io_{{sig5}}) 
-                    |   );
-                    |
-                    |initial #0 begin
-                    |    io_{{sig0}} = 8'd4;
-                    |    io_{{sig1}} = 1;
-                    |    reset=1;
+                    |""".stripMargin('|')+dutdef+initialdef+
+                    """
                     |    #RESET_TIME
                     |    reset=0;
-                    |    #RESET_TIME
-                    |    io_{{sig1}} = 0;
-                    |    #SIM_TIME
+                    |    io_reset_clk=0;
+                    |    #(4096*RESET_TIME)
                     |    $finish;
                     |end
                     |endmodule""".stripMargin('|')
-  val testbench=Handlebars(textTemplate)
-  tb write testbench(tbvars)
-  tb.close()
+    //val testbench=Handlebars(textTemplate)
+    //tb write testbench(tbvars)
+    tb write textTemplate
+    tb.close()
   }
 }
+
 
 

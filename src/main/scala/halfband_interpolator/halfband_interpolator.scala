@@ -1,5 +1,5 @@
 //These are the half-band filters for the F2 decimator
-package halfband
+package halfband_interpolator
 
 import chisel3.experimental._
 import chisel3._
@@ -8,9 +8,9 @@ import dsptools._
 import dsptools.numbers._
 import breeze.math.Complex
 
-class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5), gainbits: Int=10) extends Module {
+class halfband_interpolator (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5), gainbits: Int=10) extends Module {
     val io = IO(new Bundle {
-        val clock_low       = Input(Clock())
+        val clock_high      = Input(Clock())
         val scale           = Input(UInt(gainbits.W))
         val iptr_A          = Input(DspComplex(SInt(n.W), SInt(n.W)))
         val Z               = Output(DspComplex(SInt(n.W), SInt(n.W)))
@@ -19,10 +19,9 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
     val czero  = DspComplex(0.S(resolution.W),0.S(resolution.W)) //Constant complex zero
     val inregs  = RegInit(VecInit(Seq.fill(2)(DspComplex.wire(0.S(n.W), 0.S(n.W))))) //registers for sampling rate reduction
     //Would like to do this with foldLeft but could't figure out how.
-        inregs.foldLeft(io.iptr_A) {(prev,next)=>next:=prev; next} //The last "next" is the return value that becomes the prev
+    inregs.map(_:=io.iptr_A)
 
     //The half clock rate domain
-    withClock (io.clock_low){
         val slowregs  = RegInit(VecInit(Seq.fill(2)(DspComplex.wire(0.S(n.W), 0.S(n.W))))) //registers for sampling rate reduction
         (slowregs,inregs).zipped.map(_:=_)
 
@@ -54,15 +53,20 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
             }
         }
         val subfil2=registerchain2(tapped2.length)
-        //val subfil2= sub2coeffs.reverse.map(tap => slowregs(1)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
-        //val subfil2= sub2coeffs.map(tap => slowregs(1)*tap).foldLeft(czero)((current,prevreg)=>RegNext(current+prevreg))
-        
-        val outreg=RegInit(DspComplex.wire(0.S(n.W), 0.S(n.W)))
 
-        outreg.real := ((subfil1.real+subfil2.real)*io.scale)(resolution-1,resolution-n).asSInt
-        //io.Z.real := ((subfil1.real+subfil2.real)*io.scale)(resolution-1,resolution-n).asSInt
-        outreg.imag := ((subfil1.imag+subfil2.imag)*io.scale)(resolution-1,resolution-n).asSInt
-        //io.Z.imag := ((subfil1.imag+subfil2.imag)*io.scale)(resolution-1,resolution-n).asSInt
+    //The double clock rate domain
+    withClock (io.clock_high){
+        val outreg=RegInit(DspComplex.wire(0.S(n.W), 0.S(n.W)))
+        //Slow clock sampled with fast one to control the ouput multiplexer
+        val clkreg=Wire(Bool())
+        clkreg:=RegNext(clock.asUInt)
+        when (clkreg===true.B) { 
+            outreg.real := (subfil1.real*io.scale)(resolution-1,resolution-n).asSInt
+            outreg.imag := (subfil1.imag*io.scale)(resolution-1,resolution-n).asSInt
+        }.elsewhen (clkreg===false.B) { 
+            outreg.real := (subfil2.real*io.scale)(resolution-1,resolution-n).asSInt
+            outreg.imag := (subfil2.imag*io.scale)(resolution-1,resolution-n).asSInt
+        }
         io.Z:= outreg
     }
 }
@@ -70,11 +74,11 @@ class halfband (n: Int=16, resolution: Int=32, coeffs: Seq[Int]=Seq(-1,2,-3,4,-5
 
 
 //This is the object to provide verilog
-object halfband extends App {
+object halfband_interpolator extends App {
   //Convert coeffs to integers with 16 bit resolution
   val coeffres=16
   val taps = halfband_BW_045_N_40.H.map(_ * (math.pow(2,coeffres-1)-1)).map(_.toInt)
-  chisel3.Driver.execute(args, () => new halfband(coeffs=taps) )
+  chisel3.Driver.execute(args, () => new halfband_interpolator(coeffs=taps) )
 }
 
 
