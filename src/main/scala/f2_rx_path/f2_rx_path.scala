@@ -4,7 +4,7 @@
 package f2_rx_path
 import chisel3._
 import chisel3.util._
-import chisel3.experimental._
+import chisel3.experimental.{withClock, withReset, withClockAndReset}
 import dsptools._
 import dsptools.numbers._
 import freechips.rocketchip.util._
@@ -50,6 +50,7 @@ class f2_rx_path_io (
                                         finedelay=finedelay))
     val iptr_A             = Input(DspComplex(SInt(inputn.W), SInt(inputn.W)))
     val Z                  = Output(Vec(users,DspComplex(SInt(n.W), SInt(n.W))))
+    val bypass_out         = Output(DspComplex(SInt(n.W), SInt(n.W)))
 }
 
 class f2_rx_path (
@@ -141,15 +142,36 @@ class f2_rx_path (
     
     //Enabled write
     when (io.adc_ioctrl.adc_lut_write_en===true.B) {
-        adclut_real.write(io.adc_ioctrl.adc_lut_write_addr,io.adc_ioctrl.adc_lut_write_val.real)
-        adclut_imag.write(io.adc_ioctrl.adc_lut_write_addr,io.adc_ioctrl.adc_lut_write_val.imag)
+        //With master clock
+            adclut_real.write(io.adc_ioctrl.adc_lut_write_addr,io.adc_ioctrl.adc_lut_write_val.real)
+            adclut_imag.write(io.adc_ioctrl.adc_lut_write_addr,io.adc_ioctrl.adc_lut_write_val.imag)
     } 
     .otherwise {
-        w_lutoutdata.real:=adclut_real.read(w_lutreadaddress.real.asUInt)
-        w_lutoutdata.imag:=adclut_imag.read(w_lutreadaddress.imag.asUInt)
+        //With master clock
+            w_lutoutdata.real:=adclut_real.read(w_lutreadaddress.real.asUInt)
+            w_lutoutdata.imag:=adclut_imag.read(w_lutreadaddress.imag.asUInt)
+    }
+
+    //Reset signals to control the bypass mode
+    // When the decimator is byåpassed, also the rest of the DSP is
+    // Shut down
+    //[TODO]: gate clocks
+    val reset_bypass_register=RegInit(0.U.toBool)
+    val reset_decimator_input=RegInit(0.U.toBool)
+    when (io.decimator_controls.mode===0.U) {
+        //mode 0 bypasses the decimator
+        reset_bypass_register:=false.B
+        reset_decimator_input:=true.B
+    } .otherwise {
+        reset_bypass_register:=true.B
+        reset_decimator_input:=false.B
     }
     //RX input assignments        
-    decimator.iptr_A:=w_inselect
+    val reg_decim_in=withReset(reset_decimator_input){
+        RegInit(0.U.asTypeOf(w_inselect))
+    }
+    reg_decim_in:=w_inselect
+    decimator.iptr_A:=reg_decim_in
 
     //Gives a possibility to tune each user separately
     //even they are currently only one data stream
@@ -169,14 +191,10 @@ class f2_rx_path (
         ( userdelay,io.adc_ioctrl.user_weights
         ).zipped.map( _.optr_Z * _)
     ).zipped.map(_:=_)
- 
-    when (io.decimator_controls.mode===0.U) {
-        io.Z.map(_:=RegNext(decimator.Z))
-    } .otherwise {
-        //These are in the same clock domain if
-        //the decimator in NOT bypassed
-        (io.Z,weighted_users).zipped.map(_:=_)
-    }
+    (io.Z,weighted_users).zipped.map(_:=_)
+
+    //This is the bypass from the luts-section
+    io.bypass_out:=RegNext(w_inselect)
 }
 //This gives you verilog
 object f2_rx_path extends App {
