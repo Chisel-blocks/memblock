@@ -4,7 +4,7 @@
 package f2_rx_path
 import chisel3._
 import chisel3.util._
-import chisel3.experimental.{withClock, withReset, withClockAndReset}
+import chisel3.experimental.{FixedPoint,withClock, withReset, withClockAndReset}
 import dsptools._
 import dsptools.numbers._
 import freechips.rocketchip.util._
@@ -63,6 +63,7 @@ class f2_rx_path (
         weightbits: Int=10
     ) extends Module {
     val io = IO( new f2_rx_path_io(inputn=inputn,users=users,progdelay=progdelay))
+
     val adcproto=DspComplex(SInt(n.W),SInt(n.W))  
     val iclk=Wire(Bool())
     iclk := !io.adc_clock.asUInt
@@ -70,6 +71,7 @@ class f2_rx_path (
 
     val inreg=withClock(io.adc_clock){RegInit(0.U.asTypeOf(adcproto))}
     val inreg_inv=withClock(invclk){RegInit(0.U.asTypeOf(adcproto))}
+    //Assigns io.iptr_A. to LSB end with sign bit extension
     inreg:=io.iptr_A
     inreg_inv:=io.iptr_A
     val synced = Wire(adcproto)
@@ -184,15 +186,51 @@ class f2_rx_path (
     userdelay.map(_.iptr_A:=decimator.Z)
     (userdelay,io.adc_ioctrl.user_delays).zipped.map(_.select:=_)
     
-    val weighted_users=withClock(io.decimator_clocks.hb3clock_low){
-        Reg(Vec(users,DspComplex(SInt(n.W), SInt(n.W))))
+    //Weighting of the users. Will be raeplaced by Beamformer
+    val weighted_users=Seq.fill(users){
+        withClock(io.decimator_clocks.hb3clock_low){
+            Reg(DspComplex(SInt(n.W), SInt(n.W)))
+        }
     }
-    ( weighted_users, 
-        ( userdelay,io.adc_ioctrl.user_weights
-        ).zipped.map( _.optr_Z * _)
-    ).zipped.map(_:=_)
-    (io.Z,weighted_users).zipped.map(_:=_)
+     
+    // We do the Fixed point arithmetic here because 
+    // we only need FP to handle gain, so input does not need ot be FP
+    // Complex multiplication did not work as expected
+    //w_weighted_users(i):=( userdelay(i).optr_Z * io.adc_ioctrl.user_weights(i) 
+    // Must extend the widths to the RESULT WIDTH before multiplication
+    val w_weights=Seq.fill(users){
+        // Integer part is just the sign
+        Wire(DspComplex(
+            FixedPoint((n+weightbits).W,(weightbits-1).BP),
+            FixedPoint((weightbits).W,(weightbits-1).BP)
+        ))
+    }
+    val w_delays=Seq.fill(users){
+        // Sum of fractional bits must eventually equal weightbits after multiplication
+        Wire(DspComplex(FixedPoint((n+weightbits).W,1.BP),FixedPoint(n.W,1.BP)))
+    }
 
+    val w_weighted_users=Seq.fill(users){
+        // Sum of fractional bits must eventually equal weightbits after multiplication
+        Wire(DspComplex(
+            FixedPoint((n+weightbits).W,(weightbits).BP),
+            FixedPoint((n+weightbits).W,(weightbits).BP)
+        ))
+    }
+
+    for (i <- 0 until users ) {
+        w_weights(i).real:=io.adc_ioctrl.user_weights(i).real
+            .asFixedPoint((weightbits-1).BP)
+        w_weights(i).imag:=io.adc_ioctrl.user_weights(i).imag
+            .asFixedPoint((weightbits-1).BP)
+        w_delays(i).real:=userdelay(i).optr_Z.real.asFixedPoint(1.BP)
+        w_delays(i).imag:=userdelay(i).optr_Z.imag.asFixedPoint(1.BP)
+        w_weighted_users(i):= w_delays(i) * w_weights(i) 
+        weighted_users(i).real:=w_weighted_users(i).real.floor.asSInt 
+        weighted_users(i).imag:=w_weighted_users(i).imag.floor.asSInt 
+    }
+    //Assign output
+    io.Z:=weighted_users
     //This is the bypass from the luts-section
     io.bypass_out:=RegNext(w_inselect)
 }
