@@ -10,6 +10,7 @@ import dsptools.numbers._
 import freechips.rocketchip.util._
 import f2_decimator._
 import prog_delay._
+import clkmux._
 
 class rx_path_adc_ioctrl (
         val inputn    : Int=9,
@@ -66,22 +67,18 @@ class f2_rx_path (
 
     val adcproto=DspComplex(SInt(n.W),SInt(n.W))  
     val iclk=Wire(Bool())
+    val input_clockmux= Module( new clkmux() ).io
+
+    // Two options for input synchronization
     iclk := !io.adc_clock.asUInt
     val invclk = iclk.asClock 
+    input_clockmux.c0:=io.adc_clock
+    input_clockmux.c1:=invclk
+    input_clockmux.sel:=io.adc_ioctrl.inv_adc_clk_pol
+    val synced=withClock(input_clockmux.co){RegInit(0.U.asTypeOf(adcproto))}
 
-    val inreg=withClock(io.adc_clock){RegInit(0.U.asTypeOf(adcproto))}
-    val inreg_inv=withClock(invclk){RegInit(0.U.asTypeOf(adcproto))}
     //Assigns io.iptr_A. to LSB end with sign bit extension
-    inreg:=io.iptr_A
-    inreg_inv:=io.iptr_A
-    val synced = Wire(adcproto)
-    when (io.adc_ioctrl.inv_adc_clk_pol === false.B ) {
-        synced:=inreg
-    }.elsewhen ( io.adc_ioctrl.inv_adc_clk_pol === true.B){ 
-        synced:=inreg_inv
-    }.otherwise{
-        synced:=inreg
-    }
+    synced:=io.iptr_A
 
     val decimator  = Module ( new  f2_decimator (n=n, resolution=resolution, coeffres=16, gainbits=10)).io
     io.decimator_controls<>decimator.controls
@@ -96,15 +93,18 @@ class f2_rx_path (
     adcfifo.deq.ready:=true.B
 
     // Adc delay compensation
+    // Fast Clock
     val adcdelay=Module( new prog_delay(adcproto, maxdelay=finedelay)).io
     
     adcdelay.iptr_A:=adcfifo.deq.bits
     adcdelay.select<>io.adc_ioctrl.fine_delays
 
     //ADC lookup tables
+    // Fast Clock
     val adclut_real= SyncReadMem(scala.math.pow(2,9).toInt,SInt(inputn.W))
     val adclut_imag= SyncReadMem(scala.math.pow(2,9).toInt,SInt(inputn.W))
     val w_lutoutdata= withReset(io.adc_ioctrl.adc_lut_reset){RegInit(DspComplex.wire(0.S(inputn.W),0.S(inputn.W)))}
+    // Fast Clock
     val w_lutreadaddress= RegInit(DspComplex.wire(0.S(inputn.W),0.S(inputn.W)))
 
     //Input selection wire
@@ -232,6 +232,7 @@ class f2_rx_path (
     //Assign output
     io.Z:=weighted_users
     //This is the bypass from the luts-section
+    // Fast clock
     io.bypass_out:=RegNext(w_inselect)
 }
 //This gives you verilog
