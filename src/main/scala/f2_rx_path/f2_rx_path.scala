@@ -21,7 +21,7 @@ class rx_path_adc_ioctrl (
         val weightbits: Int=10
     ) extends Bundle {
         val adc_fifo_lut_mode  = UInt(3.W)
-        val inv_adc_clk_pol = Bool()
+        val inv_adc_clk_pol    = Bool()
         val reset_adcfifo      = Bool()
         val adc_lut_write_addr = UInt(inputn.W)
         val adc_lut_write_val  = DspComplex(SInt(inputn.W), SInt(inputn.W))
@@ -51,7 +51,10 @@ class f2_rx_path_io (
                                         finedelay=finedelay))
     val iptr_A             = Input(DspComplex(SInt(inputn.W), SInt(inputn.W)))
     val Z                  = Output(Vec(users,DspComplex(SInt(n.W), SInt(n.W))))
-    val bypass_out         = Output(DspComplex(SInt(n.W), SInt(n.W)))
+    val bypass_out         = Output(Vec(users,DspComplex(SInt(n.W), SInt(n.W))))
+    val bypass_Ndiv        = Input(UInt(8.W)) //Division at maximum with nuber of users
+                                         // Consistent with the clockdivider
+    val bypass_clock       = Input(Clock())  //Clock for bypass mode
 }
 
 class f2_rx_path (
@@ -80,7 +83,13 @@ class f2_rx_path (
     //Assigns io.iptr_A. to LSB end with sign bit extension
     synced:=io.iptr_A
 
-    val decimator  = Module ( new  f2_decimator (n=n, resolution=resolution, coeffres=16, gainbits=10)).io
+    val decimator  = Module ( 
+        new  f2_decimator (
+            n=n, 
+            resolution=resolution, 
+            coeffres=16, 
+            gainbits=10)
+        ).io
     io.decimator_controls<>decimator.controls
     io.decimator_clocks<>decimator.clocks
     val adcfifodepth=16
@@ -147,27 +156,45 @@ class f2_rx_path (
         //With master clock
             adclut_real.write(io.adc_ioctrl.adc_lut_write_addr,io.adc_ioctrl.adc_lut_write_val.real)
             adclut_imag.write(io.adc_ioctrl.adc_lut_write_addr,io.adc_ioctrl.adc_lut_write_val.imag)
-    } 
-    .otherwise {
+    } .otherwise {
         //With master clock
             w_lutoutdata.real:=adclut_real.read(w_lutreadaddress.real.asUInt)
             w_lutoutdata.imag:=adclut_imag.read(w_lutreadaddress.imag.asUInt)
     }
 
     //Reset signals to control the bypass mode
-    // When the decimator is byåpassed, also the rest of the DSP is
+    // When the decimator is bypassed, also the rest of the DSP is
     // Shut down
-    //[TODO]: gate clocks
-    val reset_bypass_register=RegInit(0.U.toBool)
-    val reset_decimator_input=RegInit(0.U.toBool)
+    val reset_bypass_register=Wire(Bool())
+    val reset_decimator_input=Wire(Bool())
+    val bypass_serdes_register=withReset(reset_bypass_register){
+        RegInit(0.U.asTypeOf(io.bypass_out))}
+
+    val bypass_counter=withReset(reset_bypass_register){
+        RegInit(0.U.asTypeOf(io.bypass_Ndiv))
+    }
+    //Count the index for the bypass mode cant exceed users
+    when ( bypass_counter < users) {
+        when ( bypass_counter < io.bypass_Ndiv-1.U) {
+            bypass_counter:=bypass_counter+1.U
+        } .otherwise {
+            bypass_counter:=0.U
+        }
+    } .otherwise {
+        bypass_counter:=0.U
+    }
+    
+
     when (io.decimator_controls.mode===0.U) {
         //mode 0 bypasses the decimator
         reset_bypass_register:=false.B
         reset_decimator_input:=true.B
+        bypass_serdes_register(bypass_counter):=w_inselect
     } .otherwise {
         reset_bypass_register:=true.B
         reset_decimator_input:=false.B
     }
+        io.bypass_out:=withClock(io.bypass_clock){RegNext(bypass_serdes_register)}
     //RX input assignments        
     val reg_decim_in=withReset(reset_decimator_input){
         RegInit(0.U.asTypeOf(w_inselect))
@@ -233,7 +260,6 @@ class f2_rx_path (
     io.Z:=weighted_users
     //This is the bypass from the luts-section
     // Fast clock
-    io.bypass_out:=RegNext(w_inselect)
 }
 //This gives you verilog
 object f2_rx_path extends App {
