@@ -165,7 +165,8 @@ class f2_rx_path (
     //Reset signals to control the bypass mode
     // When the decimator is bypassed, also the rest of the DSP is
     // Shut down
-    val reset_bypass_register=Wire(Bool())
+    val reset_bypass_register=withClock(io.bypass_clock){Reg(Bool())}
+    reset_bypass_register:=true.B
     val reset_decimator_input=Wire(Bool())
     val bypass_serdes_register=withReset(reset_bypass_register){
         RegInit(0.U.asTypeOf(io.bypass_out))}
