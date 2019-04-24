@@ -6,7 +6,7 @@ import chisel3.util._
 import chisel3.experimental._
 import dsptools._
 import dsptools.numbers._
-import f2_rx_dsp._
+import f2_signal_definitions.{usersigs, iofifosigs}
 
 class testmemproto[T <:Data] (
       val  proto : T,
