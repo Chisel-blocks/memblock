@@ -90,7 +90,6 @@ libraryDependencies  ++= Seq(
 
 // Some common deps in BWRC projects, select if needed
 // TODO-how to figure out what version is the current and the best?
-libraryDependencies += "edu.berkeley.cs" %% "dsptools" % "1.1-SNAPSHOT"
 
 //libraryDependencies += "berkeley" %% "rocketchip" % "1.2"
 //libraryDependencies += "edu.berkeley.eecs" %% "ofdm" % "0.1"
