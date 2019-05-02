@@ -6,7 +6,6 @@ import chisel3.util._
 import chisel3.experimental._
 import dsptools._
 import dsptools.numbers._
-import f2_signal_definitions.{usersigs, iofifosigs}
 
 class testmemproto[T <:Data] (
       val  proto : T,
@@ -51,7 +50,7 @@ class memblock[T <:Data] (
 }
 //This gives you verilog
 object memblock extends App {
-  val proto=new iofifosigs(n=16, users=4)
+  val proto=DspComplex(FixedPoint(8.W,4.BP))
   chisel3.Driver.execute(args, () => new memblock(proto, memsize=scala.math.pow(2,13).toInt ))
 }
 
