@@ -35,24 +35,27 @@ class memblock[T <:Data] (
         zpad             : Int=0
     ) extends Module {
     val io = IO( new Bundle { 
+            val write_en   = Input(Bool())
             val write_addr = Input(UInt(log2Ceil(memsize).W))
+            val write_val  = Input(proto)
             val read_addr  = Input(UInt(log2Ceil(memsize).W))
             val read_val   = Output(proto)
-            val write_val  = Input(proto)
     } )
 
     if (zpad > 0) {
         val memproto= new testmemproto_zpad(proto, zpad=zpad)
         val write_val=RegInit(0.U.asTypeOf(memproto))
+        val write_enable=RegInit(0.U.toBool)
         val mem =SyncReadMem(memsize, memproto)
         val write_addr =RegInit(0.U(log2Ceil(memsize).W))
         val read_addr =RegInit(0.U(log2Ceil(memsize).W))
         val read_val =RegInit(0.U.asTypeOf(memproto))
         write_addr:=io.write_addr
+        write_enable:=io.write_en
         write_val.zeropad:= 0.U.asTypeOf(memproto.zeropad)
         write_val.signal:=io.write_val
         read_addr:=io.read_addr
-        mem.write(write_addr,write_val)
+        when(write_enable){ mem.write(write_addr,write_val)}
         read_val:=mem.read(read_addr)
         io.read_val:=read_val.signal
     } else {
