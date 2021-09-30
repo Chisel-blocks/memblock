@@ -8,7 +8,7 @@ name := "memblock"
 
 version := scala.sys.process.Process("git rev-parse --short HEAD").!!.mkString.replaceAll("\\s", "")+"-SNAPSHOT"
 
-scalaVersion := "2.12.3"
+scalaVersion := "2.12.10"
 
 // [TODO] what are these needed for? remove if obsolete
 def scalacOptionsVersion(scalaVersion: String): Seq[String] = {
@@ -46,7 +46,7 @@ def gitSubmoduleHashSnapshotVersion(submod: String): String = {
 
 
 // [TODO] what are these needed for? remove if obsolete
-crossScalaVersions := Seq("2.11.11", "2.12.3")
+crossScalaVersions := Seq("2.11.11", "2.12.10")
 scalacOptions ++= scalacOptionsVersion(scalaVersion.value)
 javacOptions ++= javacOptionsVersion(scalaVersion.value)
 
@@ -61,9 +61,9 @@ resolvers += "Sonatype Releases" at "https://oss.sonatype.org/content/repositori
 // Provide a managed dependency on X if -DXVersion="" is supplied on the command line.
 // [TODO] is simpler clearer?
 val defaultVersions = Map(
-  "chisel3" -> "3.1.6",
-  "chisel-iotesters" -> "1.2.9",
-  "dsptools" -> "1.1.8"
+  "chisel3" -> "3.4.0",
+  "chisel-iotesters" -> "1.5.1",
+  "dsptools" -> "1.4.1"
   )
 
 libraryDependencies ++= (Seq("chisel3","chisel-iotesters","dsptools").map {

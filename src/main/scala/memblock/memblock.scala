@@ -22,7 +22,7 @@ class memblock[T <:Data] (
     } )
      
         val write_val=RegInit(0.U.asTypeOf(proto.cloneType))
-        val write_enable=RegInit(0.U.toBool)
+        val write_enable=RegInit(0.U.asBool)
         val mem =SyncReadMem(memsize, proto.cloneType)
         val write_addr =RegInit(0.U(log2Ceil(memsize).W))
         val read_addr =RegInit(0.U(log2Ceil(memsize).W))
