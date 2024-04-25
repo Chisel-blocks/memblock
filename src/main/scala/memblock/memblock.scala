@@ -39,10 +39,10 @@ class memblock[T <:Data] (
 }
 //This gives you verilog
 object memblock extends App {
-  val proto=DspComplex(FixedPoint(8.W,4.BP))
-  chisel3.Driver.execute(args, () => 
-          new memblock(proto, memsize=scala.math.pow(2,13).toInt)
-  )
+   // Generate verilog
+    val annos = Seq(ChiselGeneratorAnnotation(() => new  memblock(proto=DspComplex(FixedPoint(8.W,4.BP)), memsize=scala.math.pow(2,13).toInt))))
+    val sysverilog = (new ChiselStage).emitSystemVerilog(
+        new memblock(proto=DspComplex(FixedPoint(8.W,4.BP)), memsize=scala.math.pow(2,13).toInt))
 }
 
 
