@@ -32,6 +32,8 @@ class memblock[T <:Data] (
         write_enable:=io.write_en
         write_val:=io.write_val
         read_addr:=io.read_addr
+        // [ ToDo] Create structural alternatives to control whether the operation
+        // Aims for single or dual port memory
         when(write_enable){ 
             mem.write(write_addr,write_val)
         }
