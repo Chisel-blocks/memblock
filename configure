@@ -4,7 +4,6 @@
 # The purpose is to control the compilation and testing
 # in parametrized manner from this single file
 # Created by Marko Kosunen on 24.03.2015
-# Last modification by Marko Kosunen, marko.kosunen@aalto.fi, 11.12.2018 20:27
 #############################################################################
 ##Function to display help with -h argument and to control 
 ##The configuration from the commnad line
@@ -42,6 +41,7 @@ FIRRTL_JAR="$ROOTPATH/rocket-chip/firrtl/utils/bin/firrtl.jar"
 
 VPATHDIRS=`find ${SCALAPATH}/* -type d -exec basename '{}' ';'`
 MODULES="memblock"
+PACKAGE="memblock"
 
 ############################# MAKEFILE   ####################################
 CURRENTFILE="${ROOTPATH}/Makefile"
@@ -57,6 +57,7 @@ SCALAPATH= ${SCALAPATH}
 #\$(shell mkdir -p \$(DEPDIR) >/dev/null)
 \$(shell mkdir -p \$(VERILOGPATH) >/dev/null)
 MODULES= ${MODULES}
+PACKAGE=${PACKAGE}
 
 TARGETS = \$(foreach name,\$(MODULES), \$(VERILOGPATH)/\$(name).v)
 TEST_TARGETS = \$(foreach name,\$(MODULES), test_\$(name))
@@ -68,12 +69,10 @@ TOUCH=touch -r
 `for i in ${VPATHDIRS}; do
     echo vpath %.scala \\$\(SCALAPATH\)/$i
 done`
-.PHONY: all help clean \$(MODULES)
+.PHONY: all help doc clean \$(MODULES)
 
 
 all: \$(TARGETS) 
-
-#\$(TEST_TARGETS)
 
 
 #Recipes for individual modules
@@ -85,7 +84,7 @@ done`
 `for i in ${MODULES}; do
 	echo ".PHONY: test_$i"
     echo "test_$i:"
-	echo -e "\t\\$(SBT) 'runMain $i.unit_test'" 
+    echo -e "\t\\$(SBT) 'testOnly ${PACKAGE}.${i}Spec'"
 done`
 
 
@@ -96,7 +95,7 @@ done`
 	\$(eval package:=\$(basename \$(notdir \$@)))
 	\$(eval class:=\$(basename \$(notdir \$@)))
 	\$(eval testbenchfile:=\$(dir \$<)tb_\$(notdir \$<))
-	\$(SBT) 'runMain \$(package).\$(class) -td \$(VERILOGPATH)' 
+	\$(SBT) 'runMain \$(PACKAGE).\$(class) -td \$(VERILOGPATH)'
 	@#Test if testbech generator exists and compile it
 	@if [ -f \$(testbenchfile) ]; then \\
 		\$(SBT) 'runMain \$(package).tb_\$(class) -td \$(VERILOGPATH)'; \\
@@ -111,7 +110,7 @@ clean:
 MMOD ?=
 memmap:
 	cp \$(VERILOGPATH)/\$(MMOD).v  \$(VERILOGPATH)/\$(MMOD)_unmapped.orig.v
-	\$(SBT) 'runMain \$(MMOD).\$(MMOD) -td \$(VERILOGPATH) --infer-rw \$(MMOD) --repl-seq-mem -c:\$(MMOD):-o:\$(VERILOGPATH)/\$(MMOD).conf'
+	\$(SBT) 'runMain \$(PACKAGE).\$(MMOD) -td \$(VERILOGPATH) --infer-rw \$(MMOD) --repl-seq-mem -c:\$(MMOD):-o:\$(VERILOGPATH)/\$(MMOD).conf'
 
 #Generate cleanup recipes for individual modules
 `for i in ${MODULES}; do
@@ -129,6 +128,10 @@ help:
 	@for i in \$(MODULES) ; do \\
 	   echo \$\$i; \\
 	done
+
+doc:
+	sbt doc
+
 EOF
 ##################Hereafter some files you should not need to modify ################################
 

@@ -4,6 +4,7 @@ package memblock
 import chisel3._
 import chisel3.util._
 import chisel3.experimental._
+import chisel3.stage.{ChiselStage, ChiselGeneratorAnnotation}
 import dsptools._
 import dsptools.numbers._
 import scala.math._
@@ -37,12 +38,12 @@ class memblock[T <:Data] (
         read_val:=mem.read(read_addr)
         io.read_val:=read_val
 }
-//This gives you verilog
-object memblock extends App {
-  val proto=DspComplex(FixedPoint(8.W,4.BP))
-  chisel3.Driver.execute(args, () => 
-          new memblock(proto, memsize=scala.math.pow(2,13).toInt)
-  )
-}
 
+/** This gives you verilog */
+object memblock extends App {
+    val annos = Seq(ChiselGeneratorAnnotation(() => new memblock(
+        proto=DspComplex(UInt(16.W),UInt(16.W)), memsize=4096
+    )))
+    (new ChiselStage).execute(args, annos)
+}
 
