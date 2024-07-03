@@ -11,41 +11,55 @@ import scala.math._
 
 
 class memblock[T <:Data] (
-        proto            : T,
-        memsize          : Int=scala.math.pow(2,13).toInt
-    ) extends Module {
-    val io = IO( new Bundle { 
-            val write_en   = Input(Bool())
-            val write_addr = Input(UInt(log2Ceil(memsize).W))
-            val write_val  = Input(proto)
-            val read_addr  = Input(UInt(log2Ceil(memsize).W))
-            val read_val   = Output(proto)
-    } )
+  proto            : T,
+  memsize          : Int=scala.math.pow(2,13).toInt,
+  dualport         : Boolean=false
+  ) extends Module {
+  val io = IO( new Bundle { 
+    val write_en   = Input(Bool())
+    val write_addr = Input(UInt(log2Ceil(memsize).W))
+    val write_val  = Input(proto)
+    val read_addr  = Input(UInt(log2Ceil(memsize).W))
+    val read_val   = Output(proto)
+    }
+  )
      
-        val write_val=RegInit(0.U.asTypeOf(proto.cloneType))
-        val write_enable=RegInit(0.U.asBool)
-        val mem =SyncReadMem(memsize, proto.cloneType)
-        val write_addr =RegInit(0.U(log2Ceil(memsize).W))
-        val read_addr =RegInit(0.U(log2Ceil(memsize).W))
-        val read_val =RegInit(0.U.asTypeOf(proto.cloneType))
-        write_addr:=io.write_addr
-        write_enable:=io.write_en
-        write_val:=io.write_val
-        read_addr:=io.read_addr
-        // [ ToDo] Create structural alternatives to control whether the operation
-        // Aims for single or dual port memory
-        when(write_enable){ 
-            mem.write(write_addr,write_val)
-        }
-        read_val:=mem.read(read_addr)
-        io.read_val:=read_val
+  val write_val=RegInit(0.U.asTypeOf(proto.cloneType))
+  val write_enable=RegInit(0.U.asBool)
+  val mem =SyncReadMem(memsize, proto.cloneType)
+  val write_addr =RegInit(0.U(log2Ceil(memsize).W))
+  val read_addr =RegInit(0.U(log2Ceil(memsize).W))
+  val read_val =RegInit(0.U.asTypeOf(proto.cloneType))
+  write_addr:=io.write_addr
+  write_enable:=io.write_en
+  write_val:=io.write_val
+  read_addr:=io.read_addr
+  // [ ToDo] Create structural alternatives to control whether the operation
+  // Aims for single or dual port memory
+  
+  if(dualport){
+    when(write_enable){ 
+      mem.write(write_addr,write_val)
+    }
+    read_val:=mem.read(read_addr)
+    io.read_val:=read_val
+  } else {
+    read_val := DontCare
+    val rdwr_port = mem(read_addr)
+    when (write_enable) { 
+      rdwr_port := write_val 
+    }.otherwise {
+      read_val := rdwr_port
+    }
+    io.read_val:=read_val
+  }
 }
 
 /** This gives you verilog */
 object memblock extends App {
     val annos = Seq(ChiselGeneratorAnnotation(() => new memblock(
         proto=DspComplex(UInt(16.W),UInt(16.W)), memsize=4096
-    )))
+    ))) 
     (new ChiselStage).execute(args, annos)
 }
 
