@@ -58,7 +58,8 @@ class memblock[T <:Data] (
 /** This gives you verilog */
 object memblock extends App {
     val annos = Seq(ChiselGeneratorAnnotation(() => new memblock(
-        proto=DspComplex(UInt(16.W),UInt(16.W)), memsize=4096
+        proto=DspComplex(UInt(16.W),UInt(16.W)), memsize=4096, 
+        dualport=true
     ))) 
     (new ChiselStage).execute(args, annos)
 }
