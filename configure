@@ -71,7 +71,8 @@ proto ?= DspComplex(UInt(16.W),UInt(16.W))
 memsize ?= 8198
 dualport ?= true
 
-MAINPARAMS = -memsize \$(memsize)
+MAINPARAMS = -memsize \$(memsize) \\
+    -dualport \$(dualport)
 
 `for i in ${VPATHDIRS}; do
     echo vpath %.scala \\$\(SCALAPATH\)/$i

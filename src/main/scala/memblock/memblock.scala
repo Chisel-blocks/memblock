@@ -109,7 +109,7 @@ object memblock extends App {
 
     val annos = Seq(ChiselGeneratorAnnotation(() => new memblock(
         proto=DspComplex(UInt(16.W),UInt(16.W)), options("memsize").toInt, 
-        dualport=true
+        dualport=options("dualport").toBoolean
     ))) 
     (new ChiselStage).execute(arguments.toArray, annos)
 }
