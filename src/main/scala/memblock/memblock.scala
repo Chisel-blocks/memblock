@@ -13,7 +13,7 @@ import scala.math._
 class memblock[T <:Data] (
   proto            : T,
   memsize          : Int=scala.math.pow(2,13).toInt,
-  dualport         : Boolean=false
+  dualport         : Boolean=true
   ) extends Module {
   val io = IO( new Bundle { 
     val write_en   = Input(Bool())
@@ -57,10 +57,60 @@ class memblock[T <:Data] (
 
 /** This gives you verilog */
 object memblock extends App {
+    // Getopts parses the "Command line arguments for you"  
+    def getopts(options : Map[String,String], 
+        arguments: List[String]) : (Map[String,String], List[String]) = {
+        //This the help
+        val usage = """
+            |Usage: memblock.memblock [-<option>]
+            |
+            | Options
+            |     proto            [Str]     : Size of the address space. 
+            |                                  Default "DspComplex(UInt(16.W),UInt(16.W))"
+            |     memsize          [Int]     : Size of the address space. Default 8192
+            |     dualport         [Str]     : Use dualport memories. Default "true"
+            |     h                          : This help 
+          """.stripMargin
+        val optsWithArg: List[String]=List(
+            "-proto",
+            "-memsize",
+            "-dualport"
+        )
+        //Handling of flag-like options to be defined 
+        arguments match {
+            case "-h" :: tail => {
+                println(usage)
+                val (newopts, newargs) = getopts(options, tail)
+                sys.exit()
+                (Map("h"->"") ++ newopts, newargs)
+            }
+            case option :: value :: tail if optsWithArg contains option => {
+               val (newopts, newargs) = getopts(
+                   options++Map(option.replace("-","") -> value), tail
+               )
+               (newopts, newargs)
+            }
+              case argument :: tail => {
+                 val (newopts, newargs) = getopts(options,tail)
+                 (newopts, argument.toString +: newargs)
+              }
+            case Nil => (options, arguments)
+        }
+    }
+     
+    // Default options
+    val defaultoptions : Map[String,String]=Map(
+        "proto"->"DspComplex(UInt(16.W),UInt(16.W))",
+        "memsize"->"8192",
+        "dualport"->"true"
+        ) 
+    // Parse the options
+    val (options,arguments)= getopts(defaultoptions,args.toList)
+
     val annos = Seq(ChiselGeneratorAnnotation(() => new memblock(
-        proto=DspComplex(UInt(16.W),UInt(16.W)), memsize=4096, 
+        proto=DspComplex(UInt(16.W),UInt(16.W)), 8192, 
         dualport=true
     ))) 
-    (new ChiselStage).execute(args, annos)
+    (new ChiselStage).execute(arguments.toArray, annos)
 }
 
