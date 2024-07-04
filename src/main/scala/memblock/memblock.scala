@@ -72,7 +72,6 @@ object memblock extends App {
             |     h                          : This help 
           """.stripMargin
         val optsWithArg: List[String]=List(
-            "-proto",
             "-memsize",
             "-dualport"
         )
@@ -100,7 +99,6 @@ object memblock extends App {
      
     // Default options
     val defaultoptions : Map[String,String]=Map(
-        "proto"->"DspComplex(UInt(16.W),UInt(16.W))",
         "memsize"->"8192",
         "dualport"->"true"
         ) 
@@ -108,7 +106,8 @@ object memblock extends App {
     val (options,arguments)= getopts(defaultoptions,args.toList)
 
     val annos = Seq(ChiselGeneratorAnnotation(() => new memblock(
-        proto=DspComplex(UInt(16.W),UInt(16.W)), options("memsize").toInt, 
+        proto=DspComplex(UInt(16.W),UInt(16.W)), 
+        options("memsize").toInt, 
         dualport=options("dualport").toBoolean
     ))) 
     (new ChiselStage).execute(arguments.toArray, annos)
