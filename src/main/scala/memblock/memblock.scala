@@ -1,6 +1,7 @@
 // See LICENSE for license details.
 // Initially written by Marko Kosunen  20180429
 package memblock 
+
 import chisel3._
 import chisel3.util._
 import chisel3.experimental._
