@@ -67,12 +67,13 @@ SBT=sbt -J-Xmx16G -J-Xss8M
 TOUCH=touch -r
 
 # Default parameters
-proto ?= DspComplex(UInt(16.W),UInt(16.W))
 memsize ?= 8198
 dualport ?= true
 
-MAINPARAMS = -memsize \$(memsize) \\
-    -dualport \$(dualport)
+MAINPARAMS = -memsize \$(memsize) -dualport \$(dualport)
+
+#Default module for memory mapping
+MMOD ?= memblock
 
 `for i in ${VPATHDIRS}; do
     echo vpath %.scala \\$\(SCALAPATH\)/$i
@@ -115,10 +116,9 @@ clean:
 	rm -rf \$(VERILOGPATH)
 	#rm -rf \$(DEPDIR)
 
-MMOD ?=
 memmap:
 	cp \$(VERILOGPATH)/\$(MMOD).v  \$(VERILOGPATH)/\$(MMOD)_unmapped.orig.v
-	\$(SBT) 'runMain \$(PACKAGE).\$(MMOD) -td \$(VERILOGPATH) --infer-rw \$(MMOD) --repl-seq-mem -c:\$(MMOD):-o:\$(VERILOGPATH)/\$(MMOD).conf'
+	\$(SBT) 'runMain \$(PACKAGE).\$(MMOD) \$(MAINPARAMS) -td \$(VERILOGPATH) --infer-rw \$(MMOD) --repl-seq-mem -c:\$(MMOD):-o:\$(VERILOGPATH)/\$(MMOD).conf'
 
 #Generate cleanup recipes for individual modules
 `for i in ${MODULES}; do
