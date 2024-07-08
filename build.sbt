@@ -14,7 +14,7 @@ val dspVersion = "1.5.6"
 // Suppresses eviction errors for new sbt versions
 //ThisBuild / evictionErrorLevel := Level.Info
 
-lazy val root = (project in file("."))
+lazy val memblock = (project in file("."))
   .settings(
     name := "memblock",
     libraryDependencies ++= Seq(
