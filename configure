@@ -69,6 +69,8 @@ TOUCH=touch -r
 # Default parameters
 memsize ?= 8198
 dualport ?= true
+proto ?= DspComplex_UInt
+width ?= 16
 
 MAINPARAMS = -memsize \$(memsize) -dualport \$(dualport) -proto \$(proto) \\
     -width \$(width)
