@@ -70,7 +70,8 @@ TOUCH=touch -r
 memsize ?= 8198
 dualport ?= true
 
-MAINPARAMS = -memsize \$(memsize) -dualport \$(dualport)
+MAINPARAMS = -memsize \$(memsize) -dualport \$(dualport) -proto \$(proto) \\
+    -width \$(width)
 
 #Default module for memory mapping
 MMOD ?= memblock
@@ -98,7 +99,9 @@ done`
 
 
 #Template for conditional makes
-#Figure out the naming conventions later. Package is lowercase, class equals main method
+#Figure out the naming conventions later. Package is lowercase, class equals
+# main method
+
 #Does not track dependencies from scala source
 \$(VERILOGPATH)/%.v : %.scala  
 	\$(eval package:=\$(basename \$(notdir \$@)))
